@@ -388,7 +388,7 @@ def wombo_combo(strand_1, strand_2, L1, L2, spacer_len=0):
 	return(combo)
 
 
-# Nearest neighbor parameeters for generating orthogonal strands for 
+# Nearest neighbor parameters for generating orthogonal strands for 
 # SantaLucia (1998).
 
 # Nearest neighbor entropy parameters for 1M NaCl in cal / K mol
@@ -422,7 +422,7 @@ def calc_NN_S(strand):
 	SantaLucia (1998).'''
 	
 	# Initiate the value of S
-	S = 0
+	S = 0.0
 	
 	# Add the terminal corrections
 	S = S + NN_corr_S_dict.get(strand[0]) + NN_corr_S_dict.get(strand[-1])
@@ -445,7 +445,7 @@ def calc_NN_H(strand):
 	SantaLucia (1998).'''
 	
 	# Initiate the value of H
-	H = 0
+	H = 0.0
 	
 	# Add the terminal corrections
 	H = H + NN_corr_H_dict.get(strand[0]) + NN_corr_H_dict.get(strand[-1])
@@ -456,28 +456,30 @@ def calc_NN_H(strand):
 		H = H + NN_H_dict.get(pair)
 	return H
 
-def calc_Tm(strand, conc, salt):
-	'''This function takes a DNA sequence as a string (>13 bases), the strand 
-	concentration (molar), and the salt concentration (Na+, molar). It computes 
-	and returns the melting temperature Tm using the method described by 
-	SantaLucia (1998).'''
+def calc_Tm_SL(strand, conc, Na=False):
+	'''This function takes a DNA sequence as a string (>13 bases), the total 
+	strand concentration (molar), and an optional argument the salt concentration 
+	(Na+, molar). Unless Na is specified it computes and returns the melting 
+	temperature Tm using the method described by SantaLucia (1998) at 1M NaCl.'''
 
 	# Calculate the enthalpy (assumed to be salt independent)
 	H = calc_NN_H(strand)
-	
+ 
 	# Calculate the entropy
 	S = calc_NN_S(strand)
 
 	# Figure out the number of phosphates to calculate the salt correction
-	# This assumes that each base has a phosphate.
-	n = len(strand)/2.0
-	# Add the salt correction to the entropy
-	S = S + 0.368 * n * np.log(salt)
-	print(S)
+	# This assumes that each base has a phosphate. This uses the linear salt 
+	# correction from SantaLucia (1998)
+	# if Na != False:
+	# 	n = len(strand)/2.0
+	# 	# Add the salt correction to the entropy
+	# 	S = S + 0.368 * n * np.log(Na)
+	# print(S)
 	
 	# Check if the strand is self-complementary to figure out what concentration
 	# to use
-	if check_self_complement:
+	if check_self_complement(strand):
 		pass
 	# If the strand is not self-complementary, assume it is at an equal 
 	# concentration with its complement.
@@ -488,6 +490,88 @@ def calc_Tm(strand, conc, salt):
 	R = 1.987	# gas constant, cal / (K mol)
 	Tm = H / (S + R * np.log(conc))
 	return Tm
+
+# Figure out the GC fraction of a strand sequence given as a string.
+def calc_GC_frac(strand):
+	# Figure out how many G's are in the sequence
+	G = strand.count("G")
+	# Figure out how many C's are in the sequence
+	C = strand.count("C")
+	# Divide the GC count by the length of the sequence
+	GC_frac = (G+C)/len(strand)
+	return GC_frac
+
+def calc_Tm_Na_corr(Tm_SL, GC_frac, Na):
+	'''This calculates the Na salt corrected melting temperature based on 
+	Owczarzky et al 2004. It takes in Tm calculated at 1M NaCl, the GC fraction
+	of the strand, and the molar Na salt concentration. It returns the 
+	salt-corrected melting temperature.'''
+	# Calculate the inverse
+	Tm_Na_corr = 1e-5*( (4.29*GC_frac - 3.95)*np.log(Na) + 0.940*np.log(Na) ** 2.0 )
+	Tm_Na_corr += 1.0/Tm_SL
+	# Return Na salt corrected Tm
+	Tm_Na_corr = 1.0/Tm_Na_corr
+	return Tm_Na_corr
+
+def calc_Tm_Mg_corr(Tm_SL, GC_frac, Mg, Nbp, a=3.92, d=1.42, g=8.31):
+	'''This calculates the Mg salt corrected melting temperature based on 
+	Owczarzky et al 2004. It takes in Tm calculated at 1M NaCl, the GC fraction
+	of the strand, the molar Mg salt concentration, and coefficients a, d, and g.
+	It returns the Mg salt-corrected melting temperature.'''
+	# Calculate the inverse
+	Tm_Mg_corr = a-0.911*np.log(Mg) + GC_frac*(6.26+d*np.log(Mg)) \
+		+ 0.5/(Nbp-1)*(-48.2+52.5*np.log(Mg) + g*np.log(Mg) ** 2.0)
+	Tm_Mg_corr = Tm_Mg_corr*1e-5 + 1.0/Tm_SL
+	# Return Mg salt corrected Tm
+	Tm_Mg_corr = 1.0/Tm_Mg_corr
+	return Tm_Mg_corr
+
+
+def calc_Tm_SL_salt(strand, conc, Na=1.0, Mg=0.0):
+	# Calculate the melting temperature at Na = 1.0
+	Tm_SL = calc_Tm_SL(strand, conc) 
+	# Calculate the GC fraction
+	GC_frac = calc_GC_frac(strand)
+	print(GC_frac)
+	# Figure out the number of base pairs
+	Nbp = len(strand)
+	print(Nbp)
+	# Don't change the melting temperature if Na = 1 and Mg = 0
+	if Na == 1.0 and Mg == 0.0:
+		print("No change")
+		Tm_salt = Tm_SL
+	# If Na is nonzero and not 1, check the salt ratio R
+	elif Na != 0.0:
+		print("Na isn't 0")
+		R = np.sqrt(Mg)/Na
+		if R < 0.22:
+			print("Monovalent")
+			Tm_salt = calc_Tm_Na_corr(Tm_SL, GC_frac, Na)
+		elif 0.22 <= R <= 6.0:
+			print("Divalent adjusted")
+			a = 3.92*( 0.843-0.352*np.sqrt(Na)*np.log(Na) )
+			d = 1.42*( 1.279-4.03e-3*np.log(Na)-8.03e-3*np.log(Na) ** 2.0 )
+			g = 8.31*( 0.486-0.258*np.log(Na)+5.25e-3*np.log(Na) ** 3.0 )
+			Tm_salt = calc_Tm_Mg_corr(Tm_SL, GC_frac, Mg, Nbp, a=a, d=d, g=g)
+		else:
+			print("Divalent")
+			Tm_salt = calc_Tm_Mg_corr(Tm_SL, GC_frac, Mg, Nbp)
+	elif Na == 0.0:
+		print("Na is 0, Divalent")
+		Tm_salt = calc_Tm_Mg_corr(Tm_SL, GC_frac, Mg, Nbp)
+		
+	return Tm_salt
+
+# # Test different cases
+# Tm = calc_Tm_SL_salt("GATCGGTGCTAAGTTCTGGGA", 1e-4, Na=1.0, Mg=0.0) - 273.15
+# print(Tm)
+# Tm = calc_Tm_SL_salt("GATCGGTGCTAAGTTCTGGGA", 1e-4, Na=1.0, Mg=0.02) - 273.15
+# print(Tm)
+# Tm = calc_Tm_SL_salt("GATCGGTGCTAAGTTCTGGGA", 1e-4, Na=1.0, Mg=0.6) - 273.15
+# print(Tm)
+# Tm = calc_Tm_SL_salt("GATCGGTGCTAAGTTCTGGGA", 1e-4, Na=0.0, Mg=0.6) - 273.15
+# print(Tm)
+
 
 # Tm calculation via Sigma Aldrich method: 
 # https://www.sigmaaldrich.com/technical-documents/articles/biology/oligos-melting-temp.html
