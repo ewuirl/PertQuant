@@ -55,6 +55,7 @@ echo "Cmax = $Cmax"
 echo "fskew = $fskew"
 echo "Cskew = $Cskew"
 
+cd ..
 echo "Move to Nupack"
 cd ..
 echo "Move to $file_name"
@@ -62,6 +63,8 @@ cd $file_name
 echo "Move .in file to simCRN"
 mv $file_name.in ../
 cd ../
+mv $file_name.in pertquant
+cd pertquant
 mv $file_name.in simCRN
 cd simCRN
 
@@ -101,6 +104,9 @@ do
 	n_runs=`expr $n_runs - 1`
 done
 
+echo "Move $file_name files to pertquant"
+mv $file_name.* ../
+cd ../
 echo "Move $file_name files to Nupack"
 mv $file_name.* ../
 cd ../
