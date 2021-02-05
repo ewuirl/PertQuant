@@ -7,7 +7,7 @@ Analysis process
 		i. sequence ID
 		ii. read sequence
 		iii. +
-		iv. quality score
+		iv. quality score -- use nanofilt for option to parse by quality score
 2. Sequence parsing
 	- Split read sequence into sticky end, barcode, and target sequences
 	- need file(s) specifying the barcode and target sequences
