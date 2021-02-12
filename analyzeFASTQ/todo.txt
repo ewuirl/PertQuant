@@ -2,8 +2,8 @@ Analysis process
 1. Get data from fastq file
 	- Need list of fastq file names?
 		- Can read an input txt file of the file names.
-	a. open fastq file
-	b. read lines from fastq file			read_line_fastq()
+	b. open fastq file
+	c. read lines from fastq file			read_line_fastq()
 		i. sequence ID
 		ii. read sequence
 		iii. +
@@ -26,6 +26,7 @@ Multiprocessing (version 1)
 
 Multiprocessing (version 2)
 	Generate empty output txt file
+	Generate closure with output txt file name
 	Read file names from txt file
 	Multiprocess file processing
 		Read each file
