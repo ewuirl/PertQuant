@@ -27,6 +27,18 @@ for key in list(target_dict.keys()):
 	target_dict[comp] = i
 	i += 1
 
+sticky_barcode_dict = {}
+i = 0
+for key in list(barcode_dict.keys()):
+    slide_key = sticky_end + key + sticky_end
+    sticky_barcode_dict[slide_key] = i
+
+sticky_target_dict = {}
+i = 0
+for key in list(target_dict.keys()):
+    slide_key = sticky_end + key + sticky_end
+    sticky_target_dict[slide_key] = i
+
 # Set lengths
 sticky_len = 4
 target_len = 20
