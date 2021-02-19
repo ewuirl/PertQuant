@@ -114,92 +114,53 @@ def analyze_sequence(sequence, seq_id, count_array, error_list, tol=0.9):
     tail = sequence[-4:]
     # If the ends match the sticky ends, remove them
     if head == sticky_end and tail == sticky_end:
-        print('Stripping sticky ends')
+        # print('Stripping sticky ends')
         stripped_seq = sequence[4:-4]
-        print('stripped sequence: {}'.format(stripped_seq))
+        # Try splitting the sequence up into 
+        # print('splitting sequence')
+        seq_list = stripped_seq.split(sticky_end)
+        # print('This is seq_list: {}'.format(seq_list))
+        # Set barcode ID flag to -2 (not identified):
+        barcode_ID = -2
+        # Check to make sure the subsequences are all the correct sizes
+        for subseq in seq_list:
+            if len(subseq) == target_len or len(subseq) == barcode_len:
+                pass
+            # If a subsequence isn't the right size, set the check_list variable to 
+            # False
+            else:
+                check_list = False
+        # print('stripped sequence: {}'.format(stripped_seq))
     # Otherwise set check_list to false to parse through the sequence instead of
     # analyzing subseequences 
     else:
-        print('Sticky ends error, check_list set to false')
+        # print('Sticky ends error, check_list set to false')
         check_list = False
-    # Try splitting the sequence up into 
-    print('splitting sequence')
-    seq_list = stripped_seq.split(sticky_end)
-    print('This is seq_list: {}'.format(seq_list))
-    # Set barcode ID flag to -1 (not identified):
-    barcode_ID = -1
-    barcode_error = 0
-    # Check to make sure the subsequences are all the correct sizes
-    for subseq in seq_list:
-        if len(subseq) == target_len or len(subseq) == barcode_len:
-            pass
-        # If a subsequence isn't the right size, set the check_list variable to 
-        # False
-        else:
-            check_list = False
+    
     # If check_list is True, identify each subsequence
-    print('Check_list is {}'.format(check_list))
+    # print('Check_list is {}'.format(check_list))
     if check_list:
-        for subseq in seq_list:
-            print('Checking sequence: {}'.format(subseq))
-            # Check if the subsequence is in the target dictionary
-            if len(subseq) == target_len:
-                print('Checking target')
-                target_score = check_dict(subseq, target_dict, tol)
-                # If there's a match, increase the count in the array
-                if target_score[0] >= tol:
-                    print('Found target match')
-                    count_array[target_score[1]] += 1
-                # If there's no match, create a string of the fastq file name, 
-                # sequence ID, error type, subsequence, and best match 
-                # score to add to the error list
-                else:
-                    print('Didn\'t find target match')
-                    error_list.append('{}\t{}\tsubseq\t{}\t{}'\
-                        .format(file_name, seq_id, subseq, target_score[0]))
-            # Check if the subsequence is in the barcode dictionary
-            elif len(subseq) == barcode_len:
-                print('Finding barcode')
-                barcode_score = check_dict(subseq, barcode_dict, tol)
-                # If there's a match, set the barcode ID
-                if barcode_score[0] >= tol and barcode_ID == -1:
-                    print('Found barcode')
-                    barcode_ID = barcode_score[1]
-                # If there's a match and the ID doesn't match the previously 
-                # found ID, and an error hasn't previously been found, record an
-                # error
-                elif barcode_score[0] >= tol and barcode_ID != -1 and \
-                    barcode_score[1] != barcode_ID and barcode_error == 0:
-                    # Record error
-                    error_list.append('{}\t{}\tbarcode_mismatch\t{}'\
-                        .format(file_name, seq_id, seq))
-                    # Set error flag to 1
-                    barcode_error = 1
-                else:
-                    print('Barcode already found, or didn\'t find barcode')
-                    pass
-            else:
-                print('Passing on barcode')
-                pass
+        barcode_ID, is_error = list_check_match(sequence, seq_list, file_name, seq_id, \
+            count_array, error_list, tol)
     # If check list is false, use a sliding check
     else:
-        print('sliiiide check time')
-        barcode_ID, barcode_error = slide_check_match(sequence, seq_id, \
+        # print('sliiiide check time')
+        barcode_ID, is_error = slide_check_match(sequence, file_name, seq_id, \
             sticky_barcode_dict, sticky_target_dict, count_array, error_list, \
             tol)
         # sliding check
 
     # If no barcode was found, 
-    if barcode_ID < 0:
-        print('Didn\'t find barcode')
+    if barcode_ID == -2:
+        # print('error: Didn\'t find barcode')
         error_list.append('{}\t{}\tno_barcode\t{}'.format(file_name, seq_id, \
             sequence))
-    # If multiple barcodes were found, set the ID to -1
-    elif barcode_error == 1:
-        barcode_ID = -1
+        # Set error status to 1
+        is_error = 1
     else:
         pass  
-    return barcode_ID
+    # print('final is_error: {}'.format(is_error))
+    return (barcode_ID, is_error)
 
 
 def check_match(subseq, ref_dict, tol):
@@ -260,21 +221,117 @@ def check_match(subseq, ref_dict, tol):
         # tuple
         return score
 
-def slide_check_match(sequence, seq_id, sticky_barcode_dict, sticky_target_dict, 
-    count_array, error_list, tol):
-    print('sliiiide check time')
+def list_check_match(sequence, seq_list, file_name, seq_id, count_array, \
+    error_list, tol):
+    # Set barcode ID to -2 (unidentified)
+    barcode_ID = -2
+    # Set error flag to 0 (false)
+    is_error = 0
+    for subseq in seq_list:
+        # print('Checking sequence: {}'.format(subseq))
+        # Check if the subsequence is in the target dictionary
+        if len(subseq) == target_len:
+            # print('Checking target')
+            target_score = check_match(subseq, target_dict, tol)
+            # If there's a match, increase the count in the array
+            if target_score[0] >= tol:
+                # print('Found target match')
+                count_array[target_score[1]] += 1
+            # If there's no match, create a string of the fastq file name, 
+            # sequence ID, error type, subsequence, and best match 
+            # score to add to the error list
+            else:
+                # print('error: Didn\'t find target match')
+                error_list.append('{}\t{}\tsubseq\t{}\t{}'\
+                    .format(file_name, seq_id, subseq, target_score[0]))
+                # Set error status to 1
+                is_error = 1
+        # Check if the subsequence is in the barcode dictionary
+        elif len(subseq) == barcode_len:
+            # print('Finding barcode')
+            barcode_score = check_match(subseq, barcode_dict, tol)
+            # If there's a match, set the barcode ID
+            if barcode_ID == -2:
+                # print('setting barcode ID to {}'.format(barcode_score[1]))
+                barcode_ID = barcode_score[1]
+            elif barcode_score[0] >= tol and barcode_ID > -1 and \
+                barcode_score[1] != barcode_ID:
+                # print('found barcode: {}'.format(barcode_score[1]))
+                # print('already found a barcode, doesn\'t match')
+                # print('error: recording barcode mismatch')
+                # Record error
+                error_list.append('{}\t{}\tbarcode_mismatch\t{}'\
+                    .format(file_name, seq_id, sequence))
+                # Set barcode ID to -1 (mismatch)
+                # print('setting barcode ID to -1')
+                barcode_ID = -1
+                # print('setting error status to 1')
+                # Set error status to 1
+                is_error = 1
+            else:
+                # print('Barcode already found, or didn\'t find barcode')
+                pass
+        else:
+            # print('Passing on barcode')
+            pass
+        # print('list is_error: {}'.format(is_error))
+    return (barcode_ID, is_error)
+
+def slide_check_match(sequence, file_name, seq_id, sticky_barcode_dict, \
+    sticky_target_dict, count_array, error_list, tol):
+    """
+    slide_check_match(sequence, seq_id, sticky_barcode_dict, sticky_target_dict, 
+    count_array, error_list, tol)
+
+    Takes in a sequence, and checks subsequences to see if they match 
+    sticky end + target + sticky end or sticky end + barcode + sticky end. Once
+    a subsequence is analyzed for a match, the function slides to the next 
+    region and repeats the analysis. Target counts are stored in the count 
+    array and errors are stored in the provided error list.
+
+    Arguments:
+        sequence (str): a string representing a DNA sequence
+        seq_id (str): the sequence ID, starts with @
+        sticky_barcode_dict (dict): a dictionary containing barcode sequences 
+            with sticky ends at both ends
+        sticky_target_dict (dict): a dicitonary containing target sequences
+            with sticky ends at both ends
+        count_array (numpy array): a nx1 numpy array to store target sequence 
+            counts, where n is the number of target sequences
+        error_list (list): a list to store error messages in
+        tol (float): A float between [0,1] specifying how well a subsequence
+            should match the reference sequence to be considered a match. This
+            float is equivalent to a normalized Levenshtein distance. Default is
+            0.9.
+    Returns:
+        A tuple of (barcode_ID, barcode_error). 
+            barcode_ID (int): An integer representing the barcode that the 
+                sequence was tagged with. barcode_ID = -2 if a barcode 
+                is not found, -1 if a barcode mismatch was found, and 0+ if a
+                barcode was found. 
+            
+    """
+    # print('sliiiide check time')
     sticky_target_len = int(sticky_len * 2 + target_len)
     sticky_barcode_len = int(sticky_len * 2 + barcode_len)
+    # Set starting index to 0
     start = 0
-    check_target = 1
-    barcode_ID = -1
-    barcode_error = 0
+    # Set barcode ID to -2 (unidentified)
+    barcode_ID = -2
+    # Set subsequence identification flag to 1 (true)
+    identified = 1
+    # Set start point of unidentified subsequence to 0
+    unID_start = 0
+    # Set sequence error flag to 0
+    is_error = 0
+    # barcode_error = 0
     # Make sure the start point is within the sequence
-    print('Starting while loop')
+    # print('Starting while loop')
     i = 1
     while start + 4 < len(sequence):
-        print('@ beginning of loop: {}'.format(i))
-        print('start: {}'.format(start))
+        # print('@ beginning of loop: {}'.format(i))
+        # print('start: {}'.format(start))
+        # print('unID_start = {}'.format(unID_start))
         # Set the start points for deletion and insertion
         start_del = start - 1
         start_ins = start + 1
@@ -287,21 +344,22 @@ def slide_check_match(sequence, seq_id, sticky_barcode_dict, sticky_target_dict,
         target_end = start + sticky_target_len
         target_end_del = target_end - 1
         target_end_ins = target_end + 1
-        print('target end: {}'.format(target_end))
-        print('target end1: {}'.format(target_end_ins))
+        # print('target end del: {}'.format(target_end_ins))
+        # print('target end: {}'.format(target_end))
+        # print('target end ins: {}'.format(target_end_ins))
         # If the end indexes are out of bounds, cap them at the end of the \
         # sequence
         if target_end_del > len(sequence):
-            print('Target end del > sequence length, capping all ends')
+            # print('Target end del > sequence length, capping all ends')
             target_end = len(sequence)
             target_end_del = len(sequence)
             target_end_ins = len(sequence)
         elif target_end_del == len(sequence):
-            print('Target end del = sequence length, capping reg/ins end')
+            # print('Target end del = sequence length, capping reg/ins end')
             target_end = len(sequence)
             target_end_ins = len(sequence)
         elif target_end == len(sequence):
-            print('Target end = sequence length, capping ins end')
+            # print('Target end = sequence length, capping ins end')
             target_end_ins = len(sequence)
         else:
             pass
@@ -311,74 +369,93 @@ def slide_check_match(sequence, seq_id, sticky_barcode_dict, sticky_target_dict,
         target_subseq = sequence[start:target_end]
         target_subseq_del = sequence[start_del:target_end_del]
         target_subseq_ins = sequence[start_ins:target_end_ins]
-        print('target subseq: {}'.format(target_subseq))
-        print('target subseq del: {}'.format(target_subseq_del))
-        print('target subseq ins: {}'.format(target_subseq_ins))
+        # print('target subseq: {}'.format(target_subseq))
+        # print('target subseq del: {}'.format(target_subseq_del))
+        # print('target subseq ins: {}'.format(target_subseq_ins))
         # Check if the sequence matches the sticky target
         target_score = check_match(target_subseq, sticky_target_dict, tol)
         target_score_del = check_match(target_subseq_del, sticky_target_dict, tol)
         target_score_ins = check_match(target_subseq_ins, sticky_target_dict, tol)
-        print('target score: {}'.format(target_score))
-        print('target score_del: {}'.format(target_score_del))
-        print('target score_ins: {}'.format(target_score_ins))
+        # print('target score: {}'.format(target_score))
+        # print('target score_del: {}'.format(target_score_del))
+        # print('target score_ins: {}'.format(target_score_ins))
         # Pick the better of the two matches
         if target_score_ins[0] > target_score[0] and \
         target_score_ins[0] > target_score_del[0]:
-            print('insert score is best')
+            # print('insert score is best')
             target_score = target_score_ins
             target_subseq = target_subseq_ins
-            print('saving insert start/end point')
+            # print('saving insert start/end point')
             # Save the the insert indices as start and end indices 
             target_start = start_ins
             target_end = target_end_ins
         # If the first subsequence is better, save the start and end indices
         elif target_score_del[0] > target_score[0] and \
         target_score_del[0] > target_score_ins[0]:
-            print('del score is best')
+            # print('del score is best')
             target_score = target_score_del
             target_subseq = target_subseq_del
-            print('saving del start/end point')
+            # print('saving del start/end point')
             # Save the the delete indices as start and end indices 
             target_start = start_del
             target_end = target_end_del
         else:
-            print('unshifted score is better')
-            print('saving unshifted start point')
+            # print('unshifted score is better')
+            # print('saving unshifted start point')
             target_start = start
-        print('saved start point {}'.format(target_start))
-        print('saved end point {}'.format(target_end))
+        # print('saved start point {}'.format(target_start))
+        # print('saved end point {}'.format(target_end))
         # If there's a match, add it to the count
         if target_score[0] >= tol:
-            print('found a good target match')
+            # print('found a good target match')
             # Update the count
-            print('updating count array')
+            # print('updating count array')
             count_array[target_score[1]] += 1
+            # If a preceding subsequence was not identified, save the
+            # unidentified subsequence
+            if identified == 0:
+                # print('error: saving target unidentified sequence')
+                # Set the start point to the end point of the 
+                # unidentified sequence and record the unidentified 
+                # sequence in the error list
+                # print('error subsequence: {}-{}'.format(unID_start, target_start))
+                unID_subseq = sequence[unID_start:target_start]
+                error_list.append('{}\t{}\tsubseq\t{}\t{}'\
+                .format(file_name, seq_id, unID_subseq, \
+                    target_score[0]))
+                # print('setting status to identified')
+                # Set status to identified 
+                identified = 1
+                # Set error status to 1
+                is_error = 1
+            else:
+                pass
             # Set the start to the end
-            print('setting start to target end')
+            # print('setting start to target end')
             start = target_end - 4
         else:
-            print('didn\'t find a good target match')
-            print('Checking barcodes now')
+            # print('didn\'t find a good target match')
+            # print('Checking barcodes now')
             # Calculate the barcode end index
             barcode_end = start + sticky_barcode_len
             barcode_end_del = barcode_end - 1
             barcode_end_ins = barcode_end + 1
-            print('start: {}'.format(start))
-            print('barcode end: {}'.format(barcode_end))
-            print('barcode end1: {}'.format(barcode_end_ins))
+            # print('start: {}'.format(start))
+            # print('barcode end: {}'.format(barcode_end))
+            # print('barcode end1: {}'.format(barcode_end_ins))
             # If the end index is out of bounds, set it to the end of the 
             # sequence
             if barcode_end_del > len(sequence):
-                print('barcode end del > sequence length, capping all ends')
+                # print('barcode end del > sequence length, capping all ends')
                 barcode_end = len(sequence)
                 barcode_end_del = len(sequence)
                 barcode_end_ins = len(sequence)
             elif barcode_end_del == len(sequence):
-                print('barcode end del = sequence length, capping reg/ins end')
+                # print('barcode end del = sequence length, capping reg/ins end')
                 barcode_end = len(sequence)
                 barcode_end_ins = len(sequence)
             elif barcode_end == len(sequence):
-                print('barcode end = sequence length, capping ins end')
+                # print('barcode end = sequence length, capping ins end')
                 barcode_end_ins = len(sequence)
             else:
                 pass
@@ -387,86 +464,143 @@ def slide_check_match(sequence, seq_id, sticky_barcode_dict, sticky_target_dict,
             barcode_subseq = sequence[start:barcode_end]
             barcode_subseq_del = sequence[start_del:barcode_end_del]
             barcode_subseq_ins = sequence[start_ins:barcode_end_ins]
-            print('barcode subseq: {}'.format(barcode_subseq))
-            print('barcode subseq del: {}'.format(barcode_subseq_del))
-            print('barcode subseq ins: {}'.format(barcode_subseq_ins))
+            # print('barcode subseq: {}'.format(barcode_subseq))
+            # print('barcode subseq del: {}'.format(barcode_subseq_del))
+            # print('barcode subseq ins: {}'.format(barcode_subseq_ins))
             # Check if the sequence matches the sticky target
             barcode_score = check_match(barcode_subseq, sticky_barcode_dict, tol)
             barcode_score_del = check_match(barcode_subseq_del, \
                 sticky_barcode_dict, tol)
             barcode_score_ins = check_match(barcode_subseq_ins, \
                 sticky_barcode_dict, tol)
-            print('barcode score: {}'.format(barcode_score))
-            print('barcode score_del: {}'.format(barcode_score_del))
-            print('barcode score_ins: {}'.format(barcode_score_ins))
+            # print('barcode score: {}'.format(barcode_score))
+            # print('barcode score_del: {}'.format(barcode_score_del))
+            # print('barcode score_ins: {}'.format(barcode_score_ins))
             # Pick the better of the two matches
             if barcode_score_ins[0] > barcode_score[0] and \
             barcode_score_ins[0] > barcode_score_del[0]:
-                print('insert score is best')
+                # print('insert score is best')
                 barcode_score = barcode_score_ins
                 barcode_subseq = barcode_subseq_ins
-                print('saving insert start/end point')
+                # print('saving insert start/end point')
                 # Save the the insert indices as start and end indices 
                 barcode_start = start_ins
                 barcode_end = barcode_end_ins
             # If the first subsequence is better, save the start and end indices
             elif barcode_score_del[0] > barcode_score[0] and \
             barcode_score_del[0] > barcode_score_ins[0]:
-                print('del score is best')
+                # print('del score is best')
                 barcode_score = barcode_score_del
                 barcode_subseq = barcode_subseq_del
-                print('saving del start/end point')
+                # print('saving del start/end point')
                 # Save the the delete indices as start and end indices 
                 barcode_start = start_del
                 barcode_end = barcode_end_del
             else:
-                print('unshifted score is better')
-                print('saving unshifted start point')
+                # print('unshifted score is better')
+                # print('saving unshifted start point')
                 barcode_start = start
-            print('saved barcode start: {}'.format(barcode_start))
-            print('saved barcode end: {}'.format(barcode_end))
+            # print('saved barcode start: {}'.format(barcode_start))
+            # print('saved barcode end: {}'.format(barcode_end))
             # Check to see if the target or barcode match is better
             # If the target match is better
             if target_score[0] >= barcode_score[0]:
-                print('target is better than barcode score')
-                print('recording match error')
-                error_list.append('{}\t{}\tsubseq\t{}\t{}'.format(file_name, \
-                        seq_id, target_subseq, target_score[0]))
-                # Set the start to the target end
-                print('setting start to target end - 4')
-                start = target_end - 4
+                # print('target is better than barcode score')
+                # If the status was previously identified, save the start 
+                # point and set the status to unidentified
+                if identified == 1:
+                    unID_start = start
+                    identified = 0
+                # If the status was unidentified, and we've hit the end of the 
+                # sequence, save the end subsequence as an unidentified error
+                elif identified == 0 and target_end == len(sequence):
+                    # print('error: recording subsequence error at end (target)')
+                    # print('error subsequence: {}-{}'.format(unID_start, target_end))
+                    unID_subseq = sequence[unID_start:target_end]
+                    error_list.append('{}\t{}\tsubseq\t{}\t{}'\
+                    .format(file_name, seq_id, unID_subseq, \
+                    target_score[0]))
+                    # Set error status to 1
+                    is_error = 1
+                    break
+                else:
+                    pass
+                # Set start to check next 3 indices
+                start = start + 3
+                # print('setting start to start + 3')
             else:
                 if barcode_score[0] >= tol: 
-                    print('found barcode match')
-                    if barcode_ID == -1:
-                        print('setting barcode ID to {}'.format(barcode_score[1]))
+                    # print('found barcode match')
+                    # If a preceding subsequence was not identified, save the
+                    # unidentified subsequence
+                    if identified == 0:
+                        # print('error: saving unidentified sequence')
+                        # Set the start point to the end point of the 
+                        # unidentified sequence and record the unidentified 
+                        # sequence in the error list
+                        # print('error subsequence: {}-{}'.format(unID_start, barcode_start))
+                        unID_subseq = sequence[unID_start:barcode_start]
+                        error_list.append('{}\t{}\tsubseq\t{}\t{}'\
+                        .format(file_name, seq_id, unID_subseq, \
+                            barcode_score[0]))
+                        # print('setting status to identified')
+                        # Set status to identified 
+                        identified = 1
+                        # Set error status to 1
+                        is_error = 1
+                    else:
+                        pass
+                    # If the barcode was previously not found, save the barcode
+                    # ID
+                    if barcode_ID == -2:
+                        # print('setting barcode ID to {}'.format(barcode_score[1]))
                         barcode_ID = barcode_score[1]
-                    elif barcode_score[0] >= tol and barcode_ID != -1 and \
-                        barcode_score[1] != barcode_ID and barcode_error == 0:
-                        print('found barcode: {}'.format(barcode_score[1]))
-                        print('already found a barcode, doesn\'t match')
-                        print('recording barcode mismatch')
+                    # If the barcode has already been found, and a previous
+                    # barcode error has not been found, record the error
+                    elif barcode_score[0] >= tol and barcode_ID > -1 and \
+                        barcode_score[1] != barcode_ID:
+                        # print('found barcode: {}'.format(barcode_score[1]))
+                        # print('already found a barcode, doesn\'t match')
+                        # print('error: recording barcode mismatch')
                         # Record error
                         error_list.append('{}\t{}\tbarcode_mismatch\t{}'\
                             .format(file_name, seq_id, sequence))
-                        # Set error flag to 1
-                        print('setting barcode error flag to 1')
-                        barcode_error = 1
+                        # Set barcode ID flag to -1 (mismatch)
+                        # print('setting barcode ID to -1')
+                        barcode_ID = -1
+                        # print('setting error status to 1')
+                        # Set error status to 1
+                        is_error = 1
                     else:
-                        print('Barcode already found, or didn\'t find barcode')
+                        # print('Barcode already found, or didn\'t find barcode')
                         pass
+                    # Set the start to the barcode end
+                    start = barcode_end - 4
+                    # print('setting start to barcode end - 4')
                 else:
-                    print('Barcode is better match, but not a good match')
-                    print('recording error')
-                    error_list.append('{}\t{}\tsubseq\t{}\t{}'\
-                        .format(file_name, seq_id, barcode_subseq, \
-                            barcode_score[0])) 
-                # Set the start to the barcode end
-                print('setting start to barcode end - 4')
-                start = barcode_end - 4
+                    # print('Barcode is better match, but not a good match')
+                    # If the status was previously identified, save the start 
+                    # point and set the status to unID
+                    if identified == 1:
+                        unID_start = start
+                        identified = 0
+                    elif identified == 0 and barcode_end == len(sequence):
+                        # print('recording subsequence error at end (barcode)')
+                        unID_subseq = sequence[unID_start:barcode_end]
+                        error_list.append('{}\t{}\tsubseq\t{}\t{}'\
+                        .format(file_name, seq_id, unID_subseq, \
+                        barcode_score[0]))
+                        # Set error status to 1
+                        is_error = 1
+                        break
+                    else:
+                        pass
+                    # Set start to check next 3 indices
+                    start = start + 3
+                    # print('setting start to start + 3')    
         i += 1
-
-    return(barcode_ID, barcode_error)
+        # print('slide is_error: {}'.format(is_error))
+    return barcode_ID, is_error
 
 
                 

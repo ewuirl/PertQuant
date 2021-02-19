@@ -28,16 +28,16 @@ for key in list(target_dict.keys()):
 	i += 1
 
 sticky_barcode_dict = {}
-i = 0
 for key in list(barcode_dict.keys()):
     slide_key = sticky_end + key + sticky_end
-    sticky_barcode_dict[slide_key] = i
+    index = barcode_dict.get(key)
+    sticky_barcode_dict[slide_key] = index
 
 sticky_target_dict = {}
-i = 0
 for key in list(target_dict.keys()):
     slide_key = sticky_end + key + sticky_end
-    sticky_target_dict[slide_key] = i
+    index = target_dict.get(key)
+    sticky_target_dict[slide_key] = index
 
 # Set lengths
 sticky_len = 4
