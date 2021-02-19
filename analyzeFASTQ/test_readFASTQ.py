@@ -4,7 +4,6 @@ from simCRN.ml_nupack import gen_complement
 import config
 from analyzeFASTQ.readFASTQ import check_match
 from analyzeFASTQ.readFASTQ import analyze_sequence
-from analyzeFASTQ.readFASTQ import replace_check
 import numpy as np
 import jellyfish as jf
 import random as rand
@@ -1021,8 +1020,8 @@ def run_tests(test_type, testseq_list, tol):
         len(testseq_list), test_type))
 
 run_tests('perfect', perfect_seq_list, 0.9)
-# run_tests('approx', approx_seq_list, 0.9)
-# run_tests('error', error_seq_list, 0.9)
+run_tests('approx', approx_seq_list, 0.9)
+run_tests('error', error_seq_list, 0.9)
 
 def run_test(testseq, tol):
     test_name = testseq.test_name
@@ -1035,4 +1034,6 @@ def run_test(testseq, tol):
     test_sequence_print(sequence, test_name, tol, answer)
 
 # run_test(barc0, 0.9)
+
+
 
