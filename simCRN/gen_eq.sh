@@ -104,7 +104,7 @@ do
 	n_runs=`expr $n_runs - 1`
 done
 
-echo "Move $file_name files to pertquant"
+echo "Move $file_name files to PertQuant"
 mv $file_name.* ../
 cd ../
 echo "Move $file_name files to Nupack"

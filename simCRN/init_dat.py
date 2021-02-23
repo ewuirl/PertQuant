@@ -14,6 +14,7 @@ parser.add_argument('Ai', help='Ai is the initial A concentration \
 	(real)')
 parser.add_argument('-s', '--skew', help='the fraction of the data set to skew')
 parser.add_argument('-c', '--Cskew', help='the minimum value of Ci to skew the data towards')
+parser.add_argument('-n', '--note', help='notes about the data')
 args = parser.parse_args()
 
 # Unpack the args
@@ -33,13 +34,19 @@ else:
 	fskew = "None"
 	Cskew = "None"
 
+if args.note:
+	note = args.note
+else:
+	note = "None"
+
 with open(file_name + '.txt', 'w') as file:
-	file.write('N = {:d} \n'.format(N))
-	file.write('M = {:d} \n'.format(M))
-	file.write('L = {:d} \n'.format(L))
-	file.write('N_runs = {:d} \n'.format(N_runs))
-	file.write('Cmin = {} \n'.format(Cmin))
-	file.write('Cmax = {} \n'.format(Cmax))
-	file.write('Ai = {} \n'.format(Ai))
-	file.write('fskew = {} \n'.format(fskew))
-	file.write('Cskew = {} \n'.format(Cskew))
+	file.write('# N = {:d} \n'.format(N))
+	file.write('# M = {:d} \n'.format(M))
+	file.write('# L = {:d} \n'.format(L))
+	file.write('# N_runs = {:d} \n'.format(N_runs))
+	file.write('# Cmin = {} \n'.format(Cmin))
+	file.write('# Cmax = {} \n'.format(Cmax))
+	file.write('# Ai = {} \n'.format(Ai))
+	file.write('# fskew = {} \n'.format(fskew))
+	file.write('# Cskew = {} \n'.format(Cskew))
+	file.write('# note = {} \n'.format(note))
