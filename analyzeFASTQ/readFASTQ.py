@@ -7,6 +7,7 @@ import functools
 import concurrent.futures
 import numpy as np
 import jellyfish as jf
+import argparse
 
 # # Create dictionary of barcodes
 # with open('barcodes.txt', 'r') as barcode_file:
@@ -30,6 +31,25 @@ import jellyfish as jf
         
 #         # Increase the counter
 #         i += 1
+
+def calc_tol(tol_dist, length):
+    """
+    calc_tol(tol_dist, length)
+        Calculates and returns the minimum match score allowed for a particular 
+        type of sequence (target, barcode, sticky versions) based on the provided
+        max Levenshtein distance.
+    Arguments:
+        tol_dist (int): The max Levenshtein distance allowed for a sequence to
+            be considered a match with a reference sequence.
+        length (int): The length of the reference sequence.
+
+    Returns:
+        tol (float): The minimum match score allowed for a particular type of 
+        sequence (target, barcode, sticky versions) to be considered a match 
+        with a reference sequence.
+    """
+    tol = 1.0 - tol_dist/length
+    return tol
 
 def check_match(subseq, ref_dict, tol):
     """ check_match(subseq, ref_dict, tol)
@@ -165,18 +185,17 @@ def pick_best_score(start, start_del, start_ins, seq_len, sequence, ref_len, \
         start = start
     return(score, subseq, start, end)
 
-def list_check_match(sequence, seq_ID, seq_list, fastq_file, barcode_dict, \
-    target_dict, lengths, count_vec, error_list, tol):
+def list_check_match_bar(sequence, seq_ID, seq_list, fastq_file, barcode_dict, \
+    target_dict, lengths, count_vec, error_list, barcode_tol, target_tol):
     """
-    slide_check_match(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
-    sticky_target_dict, count_vec, error_list, tol)
+    list_check_match_bar(sequence, seq_ID, seq_list, fastq_file, barcode_dict, \
+    target_dict, lengths, count_vec, error_list, barcode_tol, target_tol)
 
-    Takes in a sequence, and checks subsequences to see if they match 
-    sticky end + target + sticky end or sticky end + barcode + sticky end. Once
-    a subsequence is analyzed for a match, the function slides to the next 
-    region and repeats the analysis. Target counts are stored in the count 
-    array and errors are stored in the provided error list. The barcode ID of 
-    the sequence is also determined, an a 0/1 error status is set.
+    Takes in a sequence, a list of its subsequences, checks the subsequences to 
+    see if they match the targets or barcodes in the dictionaries. Target counts
+    are stored in the count array and errors are stored in the provided error 
+    list. The barcode ID of the sequence is also determined, and a True/False error 
+    status is set.
 
     Arguments:
         sequence (str): a string representing a DNA sequence
@@ -199,10 +218,15 @@ def list_check_match(sequence, seq_ID, seq_list, fastq_file, barcode_dict, \
         count_vec (numpy array): a nx1 numpy array to store target sequence 
             counts, where n is the number of target sequences
         error_list (list): a list to store error messages in
-        tol (float): A float between [0,1] specifying how well a subsequence
-            should match the reference sequence to be considered a match. This
-            float is equivalent to a normalized Levenshtein distance. Default is
-            0.9.
+        barcode_tol (float): A float between [0,1] specifying how well a 
+            subsequence should match the reference barcode sequence to be 
+            considered a match. This float is equivalent to a normalized 
+            Levenshtein distance. Default is 0.9.
+        target_tol (float): A float between [0,1] specifying how well a 
+            subsequence should match the reference target sequence to be 
+            considered a match. This float is equivalent to a normalized 
+            Levenshtein distance. Default is 0.9.
+
     Returns:
         (barcode_ID, has_error) (tuple): 
             barcode_ID (int): An integer representing the barcode that the 
@@ -223,9 +247,9 @@ def list_check_match(sequence, seq_ID, seq_list, fastq_file, barcode_dict, \
     for subseq in seq_list:
         # Check if the subsequence is in the target dictionary
         if len(subseq) == target_len:
-            target_score = check_match(subseq, target_dict, tol)
+            target_score = check_match(subseq, target_dict, target_tol)
             # If there's a match, increase the count in the array
-            if target_score[0] >= tol:
+            if target_score[0] >= target_tol:
                 count_vec[target_score[1]] += 1
             # If there's no match, create a string of the fastq file name, 
             # sequence ID, error type, subsequence, and best match 
@@ -238,11 +262,11 @@ def list_check_match(sequence, seq_ID, seq_list, fastq_file, barcode_dict, \
                 has_error = True
         # Check if the subsequence is in the barcode dictionary
         elif len(subseq) == barcode_len:
-            barcode_score = check_match(subseq, barcode_dict, tol)
+            barcode_score = check_match(subseq, barcode_dict, barcode_tol)
             # If there's a match, set the barcode ID
             if barcode_ID == -2:
                 barcode_ID = barcode_score[1]
-            elif barcode_score[0] >= tol and barcode_ID > -1 and \
+            elif barcode_score[0] >= barcode_tol and barcode_ID > -1 and \
                 barcode_score[1] != barcode_ID:
                 # Record error
                 error_list.append('{}\t{}\tbarcode_mismatch\t{}\n'\
@@ -257,18 +281,20 @@ def list_check_match(sequence, seq_ID, seq_list, fastq_file, barcode_dict, \
             pass
     return (barcode_ID, has_error)
 
-def slide_check_match(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
-    sticky_target_dict, lengths, count_vec, error_list, tol):
+def slide_check_match_bar(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
+    sticky_target_dict, lengths, count_vec, error_list, sticky_barcode_tol, \
+    sticky_target_tol):
     """
-    slide_check_match(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
-    sticky_target_dict, count_vec, error_list, tol)
+    slide_check_match_bar(sequence, seq_ID, fastq_file, sticky_barcode_dict, 
+    sticky_target_dict, lengths, count_vec, error_list, sticky_barcode_tol, 
+    sticky_target_tol)
 
     Takes in a sequence, and checks subsequences to see if they match 
     sticky end + target + sticky end or sticky end + barcode + sticky end. Once
     a subsequence is analyzed for a match, the function slides to the next 
     region and repeats the analysis. Target counts are stored in the count 
     array and errors are stored in the provided error list. The barcode ID of 
-    the sequence is also determined, an a 0/1 error status is set.
+    the sequence is also determined, and a True/False error status is set.
 
     Arguments:
         sequence (str): a string representing a DNA sequence
@@ -289,10 +315,15 @@ def slide_check_match(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
         count_vec (numpy array): a nx1 numpy array to store target sequence 
             counts, where n is the number of target sequences
         error_list (list): a list to store error messages in
-        tol (float): A float between [0,1] specifying how well a subsequence
-            should match the reference sequence to be considered a match. This
-            float is equivalent to a normalized Levenshtein distance. Default is
-            0.9.
+        sticky_barcode_tol (float): A float between [0,1] specifying how well a
+            subsequence should match the reference sticky barcode sequence to be
+            considered a match. This float is equivalent to a normalized 
+            Levenshtein distance.
+        sticky_target_tol (float): A float between [0,1] specifying how well a
+            subsequence should match the reference sticky target sequence to be
+            considered a match. This float is equivalent to a normalized 
+            Levenshtein distance.
+
     Returns:
         (barcode_ID, has_error) (tuple): 
             barcode_ID (int): An integer representing the barcode that the 
@@ -330,14 +361,35 @@ def slide_check_match(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
         # Pick the best of the unshifted/shifted subsequence target matches
         target_score, target_subseq, target_start, target_end = \
         pick_best_score(start, start_del, start_ins, seq_len, sequence, \
-            sticky_target_len, sticky_target_dict, tol)
+            sticky_target_len, sticky_target_dict, sticky_target_tol)
         # If there's a match, add it to the count
-        if target_score[0] >= tol:
+        if target_score[0] >= sticky_target_tol:
             # Update the count
             count_vec[target_score[1]] += 1
             # If a preceding subsequence was not identified, save the
             # unidentified subsequence as an error
             if identified == False:
+                # If the match isn't perfect, check the next 3 starting points
+                # for a better match
+                if target_score[0] < 1.0:
+                    next_start = start + 3
+                    next_start_del = start_del + 3
+                    next_start_ins = start_ins + 3
+                    next_target_score, next_target_subseq, next_target_start, \
+                    next_target_end = pick_best_score(next_start, next_start_del, \
+                        next_start_ins, seq_len, sequence, sticky_target_len, \
+                        sticky_target_dict, sticky_target_tol)
+                    # If a better match was found, switch to it
+                    if next_target_score[0] > target_score[0]:
+                        target_score = next_target_score
+                        target_subseq = next_target_subseq
+                        target_start = next_target_start
+                        target_end = next_target_end
+                    else:
+                        pass
+                else:
+                    pass
+
                 # Set the start point to the end point of the unidentified 
                 # sequence and record the unidentified sequence in the error 
                 # list
@@ -356,7 +408,7 @@ def slide_check_match(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
             # Pick the best of the unshifted/shifted subsequence target matches
             barcode_score, barcode_subseq, barcode_start, barcode_end = \
             pick_best_score(start, start_del, start_ins, seq_len, sequence, \
-                sticky_barcode_len, sticky_barcode_dict, tol)
+                sticky_barcode_len, sticky_barcode_dict, sticky_barcode_tol)
             # Check to see if the target or barcode match is better
             # If the target match is better
             if target_score[0] >= barcode_score[0]:
@@ -379,10 +431,32 @@ def slide_check_match(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
                 # Set start to check next 3 indices
                 start = start + 3
             else:
-                if barcode_score[0] >= tol: 
+                if barcode_score[0] >= sticky_barcode_tol: 
                     # If a preceding subsequence was not identified, save the
                     # unidentified subsequence
                     if identified == False:
+                        # If the match isn't perfect, check the next 3 starting points
+                        # for a better match
+                        if barcode_score[0] < 1.0:
+                            next_start = start + 3
+                            next_start_del = start_del + 3
+                            next_start_ins = start_ins + 3
+                            next_barcode_score, next_barcode_subseq, \
+                            next_barcode_start, next_barcode_end = \
+                            pick_best_score(next_start, next_start_del, \
+                                next_start_ins, seq_len, sequence, \
+                                sticky_barcode_len, sticky_barcode_dict, \
+                                sticky_barcode_tol)
+                            # If a better match was found, switch to it
+                            if next_barcode_score[0] > barcode_score[0]:
+                                barcode_score = next_barcode_score
+                                barcode_subseq = next_barcode_subseq
+                                barcode_start = next_barcode_start
+                                barcode_end = next_barcode_end
+                            else:
+                                pass
+                        else:
+                            pass
                         # Set the start point to the end point of the 
                         # unidentified sequence and record the unidentified 
                         # sequence in the error list
@@ -401,7 +475,8 @@ def slide_check_match(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
                         barcode_ID = barcode_score[1]
                     # If the barcode has already been found, and a previous
                     # barcode error has not been found, record the error
-                    elif barcode_score[0] >= tol and barcode_ID > -1 and \
+                    elif barcode_score[0] >= sticky_barcode_tol and \
+                        barcode_ID > -1 and \
                         barcode_score[1] != barcode_ID:
                         # Record error
                         error_list.append('{}\t{}\tbarcode_mismatch\t{}\n'\
@@ -421,6 +496,8 @@ def slide_check_match(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
                         unID_start = start
                         identified = False
                     elif identified == False and barcode_end == seq_len:
+                        # If the subsequence hasn't been identified and we've hit 
+                        # the end, save the unidentified subsequence
                         unID_subseq = sequence[unID_start:barcode_end]
                         error_list.append('{}\t{}\tunID_subseq\t{}\n'\
                         .format(fastq_file, seq_ID, unID_subseq))
@@ -433,11 +510,11 @@ def slide_check_match(sequence, seq_ID, fastq_file, sticky_barcode_dict, \
                     start = start + 3
     return barcode_ID, has_error
 
-def analyze_sequence(sequence, seq_ID, fastq_file, sticky_end, lengths, 
+def analyze_barcoded_seq(sequence, seq_ID, fastq_file, sticky_end, lengths, 
     barcode_dict, target_dict, sticky_barcode_dict, sticky_target_dict, \
-    count_vec, error_list, tol=0.9):
+    count_vec, error_list, tols):
     """ 
-    analyze_sequence(sequence, seq_ID, fastq_file, count_vec, error_list, tol) 
+    analyze_barcoded_seq(sequence, seq_ID, fastq_file, count_vec, error_list, tols) 
     Analyzes a given sequence for barcode and target sequences. It identifies 
     which barcode the sequence is tagged with, and adds the target counts to the
     appropriate index in a provided numpy array. For sequences that don't 
@@ -470,10 +547,12 @@ def analyze_sequence(sequence, seq_ID, fastq_file, sticky_end, lengths,
         count_vec (numpy array): a nx1 numpy array to store target sequence 
             counts, where n is the number of target sequences
         error_list (list): a list to store error messages in
-        tol (float): A float between [0,1] specifying how well a subsequence
+        tols (tuple): 
+            (barcode_tol, target_tol, sticky_barcode_tol, sticky_target_tol)
+            A tuple of floats between [0,1] specifying how well a subsequence
             should match the reference sequence to be considered a match. This
             float is equivalent to a normalized Levenshtein distance. Default is
-            0.9.
+            calculated for a Levenshtein distance of 2.
 
     Returns:
         (barcode_ID, has_error) (tuple): 
@@ -501,6 +580,8 @@ def analyze_sequence(sequence, seq_ID, fastq_file, sticky_end, lengths,
     # Unpack the lengths tuple
     sticky_len, barcode_len, target_len, sticky_barcode_len, \
     sticky_target_len = lengths
+    # Unpack the tolerance tuple
+    barcode_tol, target_tol, sticky_barcode_tol, sticky_target_tol = tols
     # Check for sticky ends at the beginning and end of the sequence
     head = sequence[:sticky_len]
     tail = sequence[-sticky_len:]
@@ -526,15 +607,14 @@ def analyze_sequence(sequence, seq_ID, fastq_file, sticky_end, lengths,
     
     # If check_list is True, identify each subsequence in the list
     if check_list:
-        barcode_ID, has_error = list_check_match(sequence, seq_ID, seq_list, \
+        barcode_ID, has_error = list_check_match_bar(sequence, seq_ID, seq_list, \
             fastq_file, barcode_dict, target_dict, lengths, count_vec, \
-            error_list, tol)
+            error_list, barcode_tol, target_tol)
     # If check list is false, use a sliding check
     else:
-        barcode_ID, has_error = slide_check_match(sequence, seq_ID, fastq_file, \
+        barcode_ID, has_error = slide_check_match_bar(sequence, seq_ID, fastq_file, \
             sticky_barcode_dict, sticky_target_dict, lengths, count_vec, \
-            error_list, tol)
-        # sliding check
+            error_list, sticky_barcode_tol, sticky_target_tol)
 
     # If no barcode was found, 
     if barcode_ID == -2:
@@ -545,6 +625,254 @@ def analyze_sequence(sequence, seq_ID, fastq_file, sticky_end, lengths,
     else:
         pass  
     return (barcode_ID, has_error)
+
+def list_check_match(seq_ID, seq_list, fastq_file, target_dict, \
+    lengths, count_vec, error_list, target_tol):
+    """
+    list_check_match(seq_ID, seq_list, fastq_file, target_dict, 
+    lengths, count_vec, error_list, target_tol)
+
+    Takes in a list of subsequences, and checks subsequences to see if they match 
+    any of the targets in target_dict. Target counts are stored in the count 
+    array and errors are stored in the provided error list. A True/False error 
+    status is also set.
+
+    Arguments:
+        seq_ID (str): the sequence ID, starts with @
+        seq_list (list): a list of the subsequences split by the sticky end 
+            sequence 
+        fastq_file (str): the file name of the fastq file that is being analyzed
+        target_dict (dict): a dictionary containing target sequences (keys) and
+            target IDs (values)
+        lengths (tuple): (sticky_len, target_len, sticky_target_len) 
+            A tuple of the significant sequence lengths (int).
+            sticky_len: length of sticky end
+            target_len: length of the target sequences
+            sticky_target_len: length of 2 * sticky_end len + target_len
+        count_vec (numpy array): a nx1 numpy array to store target sequence 
+            counts, where n is the number of target sequences
+        error_list (list): a list to store error messages in
+        target_tol (float): A float between [0,1] specifying how well a subsequence
+            should match the reference sequence to be considered a match. This
+            float is equivalent to a normalized Levenshtein distance. 
+    Returns:
+        has_error (bool): True if an error is encountered during analysis,
+            False otherwise.
+    """
+    # Unpack the lengths tuple
+    target_len = lengths[1]
+    # Set error flag to False
+    has_error = False
+    # Go through the subsequences and identify them
+    for subseq in seq_list:
+        # Check if the subsequence is in the target dictionary
+        if len(subseq) == target_len:
+            target_score = check_match(subseq, target_dict, target_tol)
+            # If there's a match, increase the count in the array
+            if target_score[0] >= target_tol:
+                count_vec[target_score[1]] += 1
+            # If there's no match, create a string of the fastq file name, 
+            # sequence ID, error type, subsequence, and best match 
+            # score to add to the error list
+            else:
+                error_list.append('{}\t{}\tno_match_subseq\t{}\t{}\t{}\n'\
+                    .format(fastq_file, seq_ID, subseq, target_score[0], \
+                        target_score[1]))
+                # Set error status to True
+                has_error = True
+        else:
+            pass
+    return has_error
+
+def slide_check_match(sequence, seq_ID, fastq_file, sticky_target_dict, lengths,\
+    count_vec, error_list, sticky_target_tol):
+    """
+    slide_check_match(sequence, seq_ID, fastq_file, sticky_target_dict, lengths,\
+    count_vec, error_list, sticky_target_tol)
+
+    Takes in a sequence, and checks subsequences to see if they match 
+    sticky end + target + sticky end . Once a subsequence is analyzed for a match, 
+    the function slides to the next region and repeats the analysis. Target counts
+    are stored in the count array and errors are stored in the provided error list. 
+    A True/False error status is also set.
+
+    Arguments:
+        sequence (str): a string representing a DNA sequence
+        seq_ID (str): the sequence ID, starts with @
+        fastq_file (str): the file name of the fastq file that is being analyzed
+        sticky_target_dict (dict): a dictionary containing target sequences
+            with sticky ends at both ends (keys) and target IDs (values)
+        lengths (tuple): (sticky_len, target_len, sticky_target_len) 
+            A tuple of the significant sequence lengths (int).
+            sticky_len: length of sticky end
+            target_len: length of the target sequences
+            sticky_target_len: length of 2 * sticky_end len + target_len
+        count_vec (numpy array): a nx1 numpy array to store target sequence 
+            counts, where n is the number of target sequences
+        error_list (list): a list to store error messages in
+        sticky_target_tol (float): A float between [0,1] specifying how well a 
+            subsequence should match the reference sequence to be considered a 
+            match. This float is equivalent to a normalized Levenshtein distance. 
+    Returns:
+        has_error (bool): True if an error is encountered during analysis,
+            False otherwise.
+    """
+    # Unpack the lengths tuple
+    sticky_len, target_len, sticky_target_len = lengths
+    # Save the length of the sequence
+    seq_len = len(sequence)
+    # Set starting index to 0
+    start = 0
+    # Set subsequence identification flag to True
+    identified = True
+    # Set start point of unidentified subsequence to 0
+    unID_start = 0
+    # Set sequence error flag to False
+    has_error = False
+    # Make sure the start point is within the sequence
+    while start + sticky_len < seq_len:
+        # Set the start points for deletion and insertion subsequences
+        start_del = start - 1
+        start_ins = start + 1
+        # If the deletion start point is out of bounds, set it to 0
+        if start_del < 0:
+            start_del = start
+        else:
+            pass
+        # Pick the best of the unshifted/shifted subsequence target matches
+        target_score, target_subseq, target_start, target_end = \
+        pick_best_score(start, start_del, start_ins, seq_len, sequence, \
+            sticky_target_len, sticky_target_dict, sticky_target_tol)
+        # If there's a match, add it to the count
+        if target_score[0] >= sticky_target_tol:
+            # Update the count
+            count_vec[target_score[1]] += 1
+            # If a preceding subsequence was not identified, save the
+            # unidentified subsequence as an error
+            if identified == False:
+                # Set the start point to the end point of the unidentified 
+                # sequence and record the unidentified sequence in the error 
+                # list
+                unID_subseq = sequence[unID_start:target_start]
+                error_list.append('{}\t{}\tunID_subseq\t{}\n'\
+                .format(fastq_file, seq_ID, unID_subseq))
+                # Set status to identified 
+                identified = True
+                # Set error status to True
+                has_error = True
+            else:
+                pass
+            # Set the next start index to the target end index - sticky length
+            start = target_end - sticky_len
+        else:
+            # If the status was previously identified, save the start 
+            # point and set the status to unidentified
+            if identified == True:
+                unID_start = start
+                identified = False
+            # If the status was unidentified, and we've hit the end of the 
+            # sequence, save the end subsequence as an unidentified error
+            elif identified == False and target_end == seq_len:
+                unID_subseq = sequence[unID_start:target_end]
+                error_list.append('{}\t{}\tunID_subseq\t{}\n'\
+                .format(fastq_file, seq_ID, unID_subseq))
+                # Set error status to True
+                has_error = True
+                break
+            else:
+                pass
+            # Set start to check next 3 indices
+            start = start + 3
+            
+    return has_error
+
+def analyze_seq(sequence, seq_ID, fastq_file, sticky_end, lengths, target_dict, \
+    sticky_target_dict, count_vec, error_list, tols):
+    """ 
+    analyze_barcoded_seq(sequence, seq_ID, fastq_file, count_vec, error_list, tols) 
+
+    Analyzes a given sequence for target sequences. It adds the target counts to
+    a provided numpy array. For sequences that don't perfectly match the reference 
+    target sequences, it calculates a match score  using a normalized Levenshtein 
+    distance. The match is accepted if the match score is >= the provided 
+    tolerance values. If errors arise, it adds a string documenting the error 
+    and sequence to the provided error list.
+
+    Arguments:
+        sequence (str): a string representing a DNA sequence
+        seq_ID (str): the sequence ID, starts with @
+        fastq_file (str): the file name of the fastq file that is being analyzed
+        sticky_end (str): a string representing a sticky end sequence
+        target_dict (dict): a dictionary containing target sequences (keys) and
+            target IDs (values)
+        sticky_target_dict (dict): a dictionary containing target sequences
+            with sticky ends at both ends (keys) and target IDs (values)
+        lengths (tuple): (sticky_len, target_len, sticky_target_len) 
+            A tuple of the significant sequence lengths (int).
+            sticky_len: length of sticky end
+            target_len: length of the target sequences
+            sticky_target_len: length of 2 * sticky_end len + target_len
+        count_vec (numpy array): a nx1 numpy array to store target sequence 
+            counts, where n is the number of target sequences
+        error_list (list): a list to store error messages in
+        tols (tuple): 
+            (target_tol, sticky_target_tol)
+            A tuple of floats between [0,1] specifying how well a subsequence
+            should match the reference sequence to be considered a match. This
+            float is equivalent to a normalized Levenshtein distance. Default is
+            calculated for a Levenshtein distance of 2.
+
+    Returns:
+        has_error (bool): True if an error is encountered during analysis,
+            False otherwise.
+    Errors:
+        no target match: a subsequence (correct length) not identifiable
+            as target
+            "fastq_file [tab] seq_ID [tab] subseq [tab] lev_score [tab] ID"
+        no match: a subsequence (correct or incorrect length) not identifiable
+            as target
+            "fastq_file [tab] seq_ID [tab] subseq"
+    """
+    # Assume we will be able to chop the sequence into a list of subsequences
+    check_list = True
+    # Set the count vector to 0
+    count_vec[:] = np.zeros(len(count_vec))
+    # Unpack the lengths tuple
+    sticky_len, target_len, sticky_target_len = lengths
+    # Unpack the tolerance tuple
+    target_tol, sticky_target_tol = tols
+    # Check for sticky ends at the beginning and end of the sequence
+    head = sequence[:sticky_len]
+    tail = sequence[-sticky_len:]
+    # If the ends match the sticky ends, remove them
+    if head == sticky_end and tail == sticky_end:
+        stripped_seq = sequence[sticky_len:-sticky_len]
+        # Try splitting the sequence up into 
+        seq_list = stripped_seq.split(sticky_end)
+        # Check to make sure the subsequences are all the correct sizes
+        for subseq in seq_list:
+            if len(subseq) == target_len:
+                pass
+            # If a subsequence isn't the right size, set the check_list variable
+            # to False
+            else:
+                check_list = False
+    # Otherwise set check_list to false to parse through the sequence instead of
+    # analyzing subseequences 
+    else:
+        check_list = False
+    
+    # If check_list is True, identify each subsequence in the list
+    if check_list:
+        has_error = list_check_match(seq_ID, seq_list, fastq_file, target_dict, \
+            lengths, count_vec, error_list, target_tol)
+
+    # If check list is false, use a sliding check
+    else:
+        has_error = slide_check_match(sequence, seq_ID, fastq_file, \
+            sticky_target_dict, lengths, count_vec, error_list, sticky_target_tol)
+
+    return has_error
 
 def test_pick_info_files(barcode_file, target_file):
     """
@@ -568,10 +896,7 @@ def test_func(fastq_file, barcode_file, target_file):
 
 # test_func('file owo')
 
-class EmptyLineErr(Exception):
-    def __init__(self, arg):
-        self.strerror = arg
-        self.args = {arg}
+
 
 def make_dictionary(file_name, sticky_end, is_sticky=True):
     """
@@ -704,16 +1029,17 @@ def pick_info_files(barcode_file, target_file, sticky_end, tol=0.9):
         return wrapper
     return save_file_decorator
 
-def specify_tol(tol=0.9):
+def specify_tol(target_tol_dist=1, barcode_tol_dist=1):
     """
-    specify_tol(tol=0.9)
+    specify_tol(target_tol_dist=1, barcode_tol_dist=1):
 
-    Used to specify the tolerance that will be used for sequence matching.
-    Use as a decorator to decorate analyze_fastq(fastq_file, tol=0.9).
+    Used to specify the tolerances that will be used for sequence matching.
+    Use as a decorator to decorate 
+    analyze_fastq(fastq_file, target_tol_dist=1, barcode_tol_dist=1).
 
     Arguments:
-        tol (float): a float between [0,1] inclusive, specifying the tolerance
-            to use for sequence matching. 1 is a perfect match.
+        target_tol_dist (int): an integer >= 0, specifying the tolerance
+            to use for sequence matching. Must be smaller than
 
     Returns:
         A decorated function with tol set to the specified tolerance.
@@ -721,11 +1047,10 @@ def specify_tol(tol=0.9):
     def save_file_decorator(func):
         @functools.wraps(func)
         def wrapper(fastq_file):
-            return func(fastq_file, tol=tol)
+            return func(fastq_file, target_tol_dist=target_tol_dist, \
+                barcode_tol_dist=barcode_tol_dist)
         return wrapper
     return save_file_decorator
-
-
 
 def analyze_barcodes_file(fastq_file):
     """
@@ -760,95 +1085,168 @@ def analyze_barcodes_file(fastq_file):
     return num_barcodes
 
 
+
+
 if __name__ == "__main__":
-    sticky_end = 'TGCA'
-    # Test values
-    file_list = ['tiny.fastq', 'approx.fastq', 'tiny_error.fastq']
-    barcode_file = 'test_barcodes.txt'
-    target_file = 'test_targets.txt'
-    error_file = 'test_errors.txt'
-    count_file = 'test_count.txt'
+    parser = argparse.ArgumentParser(description='Analyzes fastq files')
+    parser.add_argument('fastq_files', type=str, help='The path to the file \
+        with the names of fastq files to analyze.')
+    parser.add_argument('target_file', type=str, help='The path to the file \
+        with the reference target sequences to use during analysis.')
+    parser.add_argument('error_file', type=str, help='The path to the file \
+        to save errors to.')
+    parser.add_argument('save_file', type=str, help='The path to the file \
+        to save results to.')
+    parser.add_argument('-bf', '--barcode_file', type=str, help='The path to the \
+        file with the reference barcodes to use during analysis.')
+    parser.add_argument('-td', '--target_tol_dist', type=int, help='An integer \
+        value >= 0 specifying the max allowed Levenshtein distance between a \
+        subsequence and a reference target sequence to be considered a match. \
+        Defaults to 2.')
+    parser.add_argument('-bd', '--barcode_tol_dist', type=int, help='An integer \
+        value >= 0 specifying the max allowed Levenshtein distance between a \
+        subsequence and a reference barcode sequence to be considered a match. \
+        Defaults to 2.')
+    parser.add_argument('-s', '--sticky', type=str, help='A string specifying the \
+        sticky sequence used. Defaults to TGCA')
+    args = parser.parse_args()
 
-    # Make the barcode and sticky barcode dictionaries
-    barcode_dict, sticky_barcode_dict, barcode_len, sticky_barcode_len, \
-    num_barcodes = make_dictionary(barcode_file, sticky_end)
-    # Make the target and sticky target dictionaries
-    target_dict, sticky_target_dict, target_len, sticky_target_len, num_targets\
-     = make_dictionary(target_file, sticky_end, is_sticky=False)
-    # Determine the sticky end length
-    sticky_len = len(sticky_end)
-    # Make the lengths tuple
-    lengths = (sticky_len, barcode_len, target_len, sticky_barcode_len, \
-        sticky_target_len) 
-    # Create an array to store counts in
-    total_count_array = np.zeros((num_barcodes, num_targets))
-    # Create a variable to store the number of sequences analyzed
-    total_analyzed_seq = 0
-    # Create a variable to store the number of sequences with errors
-    total_seq_error = 0
-    # Create a variable to store the total number of errors found
-    total_error = 0
+    # Unpack the required arguments
+    fastq_files = args.fastq_files
+    target_file = args.target_file
+    error_file = args.error_file
+    save_file = args.save_file
+    # If a barcode file path was given, set has_barcodes to True and set the
+    # barcode_file_path variable
+    if args.barcode_file:
+        has_barcodes=True
+        barcode_file = args.barcode_file
+    else:
+        has_barcodes=False
+        barcode_file='no'
 
+    # If a different sticky end was used, change from the default
+    if args.sticky:
+        sticky_end = args.sticky
+    else:
+        sticky_end = 'TGCA'
+
+    # # Test values
+    # file_list = ['tiny.fastq', 'approx.fastq', 'tiny_error.fastq']
+    # barcode_file = 'test_barcodes.txt'
+    # target_file = 'test_targets.txt'
+    # error_file = 'test_errors.txt'
+    # count_file = 'test_count.txt'
+
+    # # Make the target and sticky target dictionaries
+    # target_dict, sticky_target_dict, target_len, sticky_target_len, num_targets\
+    #  = make_dictionary(target_file, sticky_end, is_sticky=False)
+    # # Determine the sticky end length
+    # sticky_len = len(sticky_end)
+
+    # # If the sequences are barcoded
+    # if has_barcodes == True:
+    #     # Make the barcode and sticky barcode dictionaries
+    #     barcode_dict, sticky_barcode_dict, barcode_len, sticky_barcode_len, \
+    #     num_barcodes = make_dictionary(barcode_file, sticky_end)
+    #     # Make the lengths tuple
+    #     lengths = (sticky_len, barcode_len, target_len, sticky_barcode_len, \
+    #         sticky_target_len) 
+    # else:
+    #     # Make the lengths tuple
+    #     lengths = (sticky_len, target_len, sticky_target_len) 
+
+    # # Calculate the tolerances
+    if args.target_tol_dist:
+        target_tol_dist = args.target_tol_dist
+    else:
+        target_tol_dist = 2
+    if args.barcode_tol_dist:
+        barcode_tol_dist = args.barcode_tol_dist
+    else:
+        barcode_tol_dist = 2
+    print(f'fastq input: {fastq_files}')
+    print(f'target input: {target_file}')
+    print(f'error input: {error_file}')
+    print(f'save input: {save_file}')
+    print(f'barcode input: {barcode_file}')
+    print(f'target tol: {target_tol_dist}')
+    print(f'barcode tol: {barcode_tol_dist}')
+    print(f'sticky end: {sticky_end}')
+    # target_tol = calc_tol(target_tol_dist, target_len)
+    # barcode_tol = calc_tol(barcode_tol_dist, barcode_len)
+    # sticky_target_tol = calc_tol(target_tol_dist, sticky_target_len)
+    # sticky_barcode_tol = calc_tol(barcode_tol_dist, sticky_barcode_len)
+    # # Group the tolerances into a tuple
+    # tols = (barcode_tol, target_tol, sticky_barcode_tol, sticky_target_tol)
+    # # Create an array to store counts in
+    # total_count_array = np.zeros((num_barcodes, num_targets))
+    # # Create a variable to store the number of sequences analyzed
+    # total_analyzed_seq = 0
+    # # Create a variable to store the number of sequences with errors
+    # total_seq_error = 0
+    # # Create a variable to store the total number of errors found
+    # total_error = 0
     
-    @specify_tol()            
-    def analyze_fastq(fastq_file, tol=0.9):
-        print('Tol = {}'.format(tol))
-        count_array = np.zeros((num_barcodes, num_targets))
-        # Create a vector to store target counts in 
-        count_vec = np.zeros(num_targets)
-        # Open the target file and analyze the sequences
-        with open(fastq_file, 'r') as file:
-            # Count the number of sequences
-            num_seq = 0
-            num_errors = 0
-            # Create a list to store errors in
-            error_list = []
-            while True:
-                # Read the sequence ID
-                seq_ID = file.readline().rstrip('\n')
-                # If we've reached the end of the file, break the loop
-                if not seq_ID:
-                    break
-                # Read in the sequence and strip the new line
-                seq = file.readline().rstrip('\n')
-                # Update the sequence count
-                num_seq += 1
-                # Read in the + line
-                file.readline()
-                # Read in the Q_score
-                Q_score = file.readline().rstrip('\n')
-                # Analyze the sequence
-                barcode_ID, has_error = analyze_sequence(seq, seq_ID, \
-                    fastq_file, sticky_end, lengths, barcode_dict, target_dict, \
-                    sticky_barcode_dict, sticky_target_dict, count_vec, error_list, \
-                    tol=tol)
-                # Update the number of sequences with errors
-                num_errors += has_error
-                # Add the target counts to the count array
-                if barcode_ID >= 0:
-                    count_array[barcode_ID,:] += count_vec
-                else:
-                    pass
-        return (count_array, num_seq, error_list, num_errors)
+    # # @specify_tol()            
+    # def analyze_fastq(fastq_file):
+    #     # print('Tol = {}'.format(tol))
+    #     count_array = np.zeros((num_barcodes, num_targets))
+    #     # Create a vector to store target counts in 
+    #     count_vec = np.zeros(num_targets)
+    #     # Open the target file and analyze the sequences
+    #     with open(fastq_file, 'r') as file:
+    #         # Count the number of sequences
+    #         num_seq = 0
+    #         num_errors = 0
+    #         # Create a list to store errors in
+    #         error_list = []
+    #         while True:
+    #             # Read the sequence ID
+    #             seq_ID = file.readline().rstrip('\n')
+    #             # If we've reached the end of the file, break the loop
+    #             if not seq_ID:
+    #                 break
+    #             # Read in the sequence and strip the new line
+    #             seq = file.readline().rstrip('\n')
+    #             # Update the sequence count
+    #             num_seq += 1
+    #             # Read in the + line
+    #             file.readline()
+    #             # Read in the Q_score
+    #             Q_score = file.readline().rstrip('\n')
+    #             # Analyze the sequence
+    #             barcode_ID, has_error = analyze_barcoded_seq(seq, seq_ID, \
+    #                 fastq_file, sticky_end, lengths, barcode_dict, target_dict, \
+    #                 sticky_barcode_dict, sticky_target_dict, count_vec, error_list, \
+    #                 tols)
+    #             # Update the number of sequences with errors
+    #             num_errors += has_error
+    #             # Add the target counts to the count array
+    #             if barcode_ID >= 0:
+    #                 count_array[barcode_ID,:] += count_vec
+    #             else:
+    #                 pass
+    #     return (count_array, num_seq, error_list, num_errors)
 
-    # Parallelize the file analysis process
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        results = executor.map(analyze_fastq, file_list)
-        for result in results:
-            count_arr, num_seq, error_list, num_errors = result
-            # Add the counts from each file to the total array
-            total_count_array += count_arr
-            # Write the errors from each file to the error file
-            write_errors(error_file, error_list)
-            # Update the number of sequences analyzed
-            total_analyzed_seq += num_seq
-            # Update the number of sequences with errors
-            total_seq_error += num_errors
-            # Update the number of errors found
-            total_error += len(error_list)
+    # # Parallelize the file analysis process
+    # with concurrent.futures.ProcessPoolExecutor() as executor:
+    #     results = executor.map(analyze_fastq, file_list)
+    #     for result in results:
+    #         count_arr, num_seq, error_list, num_errors = result
+    #         # Add the counts from each file to the total array
+    #         total_count_array += count_arr
+    #         # Write the errors from each file to the error file
+    #         write_errors(error_file, error_list)
+    #         # Update the number of sequences analyzed
+    #         total_analyzed_seq += num_seq
+    #         # Update the number of sequences with errors
+    #         total_seq_error += num_errors
+    #         # Update the number of errors found
+    #         total_error += len(error_list)
 
-    print('total count array')
-    print(total_count_array)
-    print('total analyzed sequences: ', total_analyzed_seq)
-    print('total sequences with errors: ', total_seq_error)
-    print('total errors: ', total_error)
+    # print('total count array')
+    # print(total_count_array)
+    # print('total analyzed sequences: ', total_analyzed_seq)
+    # print('total sequences with errors: ', total_seq_error)
+    # print('total errors: ', total_error)

@@ -2,8 +2,10 @@ import sys
 sys.path.append('../')
 from simCRN.ml_nupack import gen_complement
 import config
-from analyzeFASTQ.readFASTQ import analyze_sequence
+from analyzeFASTQ.readFASTQ import analyze_barcoded_seq
+from analyzeFASTQ.readFASTQ import analyze_seq
 from analyzeFASTQ.readFASTQ import make_dictionary
+from analyzeFASTQ.readFASTQ import calc_tol
 import numpy as np
 import jellyfish as jf
 import random as rand
@@ -28,8 +30,21 @@ target_len = config.target_len
 barcode_len = config.barcode_len
 sticky_barcode_len = int(2*sticky_len + barcode_len)
 sticky_target_len = int(2*sticky_len + target_len)
+barcode_lengths = (sticky_len, barcode_len, sticky_barcode_len) 
 lengths = (sticky_len, barcode_len, target_len, sticky_barcode_len, \
     sticky_target_len) 
+
+# Calculate the tolerances
+target_tol_dist = 2
+barcode_tol_dist = 2
+target_tol = calc_tol(target_tol_dist, target_len)
+barcode_tol = calc_tol(barcode_tol_dist, barcode_len)
+sticky_target_tol = calc_tol(target_tol_dist, sticky_target_len)
+sticky_barcode_tol = calc_tol(barcode_tol_dist, sticky_barcode_len)
+# Group the tolerances into a tuple
+barcode_tols = (barcode_tol, sticky_barcode_tol)
+tols = (barcode_tol, target_tol, sticky_barcode_tol, sticky_target_tol)
+
 
 barcode_ins = barcode + 'i'
 barcode_del = barcode[1:]
@@ -118,13 +133,13 @@ sticky_ins = sticky_end + 'i'
 sticky_swap = sticky_end[1] + sticky_end[0] + sticky_end[2:]
 sticky_switch = 'j' + sticky_end[:3]
 
-def test_sequence(sequence, test_name, tol, answer):
+def test_barcoded_sequence(sequence, test_name, tols, answer):
     true_count, true_error, has_error, true_ID = answer
     count_array = np.zeros(2)
     error_list = []
-    barcode_ID, is_error = analyze_sequence(sequence, '@seqid', 'testfile', \
+    barcode_ID, is_error = analyze_barcoded_seq(sequence, '@seqid', 'testfile', \
         sticky_end, lengths, barcode_dict, target_dict, sticky_barcode_dict, \
-        sticky_target_dict, count_array, error_list, tol=0.9)
+        sticky_target_dict, count_array, error_list, tols)
     if np.array_equal(count_array, true_count):
         pass
     else:
@@ -144,13 +159,13 @@ def test_sequence(sequence, test_name, tol, answer):
 
     return passed
 
-def test_sequence_print(sequence, test_name, tol, answer):
+def test_barcoded_sequence_print(sequence, test_name, tols, answer):
     true_count, true_error, has_error, true_ID = answer
     count_array = np.zeros(2)
     error_list = []
-    barcode_ID, is_error = analyze_sequence(sequence, '@seqid', 'testfile', \
+    barcode_ID, is_error = analyze_barcoded_seq(sequence, '@seqid', 'testfile', \
         sticky_end, lengths, barcode_dict, target_dict, sticky_barcode_dict, \
-        sticky_target_dict, count_array, error_list, tol=0.9)
+        sticky_target_dict, count_array, error_list, tols)
     passed = 1
     if np.array_equal(count_array, true_count):
         pass
@@ -181,6 +196,60 @@ def test_sequence_print(sequence, test_name, tol, answer):
         print('Test: {} failed barcode'.format(test_name))
         print('True barcode: {}'.format(true_ID))
         print('Calc barcode: {}'.format(barcode_ID))
+    return passed
+
+def test_sequence(sequence, test_name, tols, answer):
+    true_count, true_error, has_error, true_ID = answer
+    count_array = np.zeros(2)
+    error_list = []
+    is_error = analyze_seq(sequence, '@seqid', 'testfile', \
+        sticky_end, barcode_lengths, barcode_dict, sticky_barcode_dict, count_array, \
+        error_list, tols)
+    if np.array_equal(count_array, true_count):
+        pass
+    else:
+        passed = 0
+    if true_error == len(error_list):
+        pass
+    else:
+        passed = 0
+    if true_is_error == is_error:
+        pass
+    else:
+        passed = 0
+
+    return passed
+
+def test_sequence_print(sequence, test_name, tols, answer):
+    true_count, true_error, has_error, true_ID = answer
+    count_array = np.zeros(2)
+    error_list = []
+    is_error = analyze_seq(sequence, '@seqid', 'testfile', \
+        sticky_end, barcode_lengths, barcode_dict, sticky_barcode_dict, count_array, \
+        error_list, tols)
+    passed = 1
+    if np.array_equal(count_array, true_count):
+        pass
+    else:
+        passed = 0
+        print('Test: {} failed counts'.format(test_name))
+        print('True counts: {}'.format(true_count))
+        print('Calc counts: {}'.format(count_array))
+    if true_error == len(error_list):
+        pass
+    else:
+        passed = 0
+        print('Test: {} failed # errors'.format(test_name))
+        print('True error: {}'.format(true_error))
+        print('Calc error: {}'.format(len(error_list)))
+        print('{} errors: {}'.format(test_name, error_list))
+    if has_error == is_error:
+        pass
+    else:
+        print('Test: {} failed has error'.format(test_name))
+        print('True has error: {}'.format(has_error))
+        print('Calc has error: {}'.format(is_error))
+        passed = 0
     return passed
 
 class testseq:
@@ -538,19 +607,19 @@ bar0_tar0_swap_rand = testseq('barcode 0 target 0 rand swap', \
     sticky_end + rand_targetc_swap + sticky_end + barcode + sticky_end + barcode + sticky_end, \
     np.array([1,0]), 0, False, 0)
 
-barc0_tar0_del_rand = testseq('barcode 0 target 0 rand deletion', \
+barc0_tar0_del_rand = testseq('barcode comp 0 target 0 rand deletion', \
     sticky_end + rand_target_del + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
     np.array([1,0]), 0, False, 0)
 
-barc0_tar0_ins_rand = testseq('barcode 0 target 0 rand insertion', \
+barc0_tar0_ins_rand = testseq('barcode comp 0 target 0 rand insertion', \
     sticky_end + rand_target_ins + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
     np.array([1,0]), 0, False, 0)
 
-barc0_tar0_switch_rand = testseq('barcode 0 target 0 rand switch', \
+barc0_tar0_switch_rand = testseq('barcode comp 0 target 0 rand switch', \
     sticky_end + rand_target_switch + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
     np.array([1,0]), 0, False, 0)
 
-barc0_tar0_swap_rand = testseq('barcode 0 target 0 rand swap', \
+barc0_tar0_swap_rand = testseq('barcode comp 0 target 0 rand swap', \
     sticky_end + rand_target_swap + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
     np.array([1,0]), 0, False, 0)
 
@@ -570,19 +639,19 @@ bar0_tar1_swap_rand = testseq('barcode 0 target 1 rand swap', \
     sticky_end + rand_targetc1_swap + sticky_end + barcode + sticky_end + barcode + sticky_end, \
     np.array([0,1]), 0, False, 0)
 
-barc0_tar1_del_rand = testseq('barcode 0 target 1 rand deletion', \
+barc0_tar1_del_rand = testseq('barcode comp 0 target 1 rand deletion', \
     sticky_end + rand_target1_del + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
     np.array([0,1]), 0, False, 0)
 
-barc0_tar1_ins_rand = testseq('barcode 0 target 1 rand insertion', \
+barc0_tar1_ins_rand = testseq('barcode comp 0 target 1 rand insertion', \
     sticky_end + rand_target1_ins + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
     np.array([0,1]), 0, False, 0)
 
-barc0_tar1_switch_rand = testseq('barcode 0 target 1 rand switch', \
+barc0_tar1_switch_rand = testseq('barcode comp 0 target 1 rand switch', \
     sticky_end + rand_target1_switch + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
     np.array([0,1]), 0, False, 0)
 
-barc0_tar1_swap_rand = testseq('barcode 0 target 1 rand swap', \
+barc0_tar1_swap_rand = testseq('barcode comp 0 target 1 rand swap', \
     sticky_end + rand_target1_swap + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
     np.array([0,1]), 0, False, 0)
 
@@ -964,7 +1033,7 @@ unID_endseq = testseq('unidentified end subsequence', \
 short = testseq('short', 'whatisthis', np.zeros(2), 2, True, -2)
 
 unidentified_seq = testseq('unidentified sequence', \
-    'whatisthiswhatisthiswhatisthiswhatisthiswhatisthi', np.array([0,0]), 2, True, -2)
+    'whatisthiswhatisthiswhatisthiswhatisthiswhatisthis', np.array([0,0]), 2, True, -2)
 
 perfect_seq_list = [bar0, barc0, bar1, barc1, \
 bar0tar0, bar0tar1, bar0tar01, \
@@ -1017,8 +1086,492 @@ bar0_sticky_del, bar0_sticky_ins, bar0_sticky_switch, bar0_sticky_swap]
 error_seq_list = [mixed_bar, mixed_barc, mixed_bar_tar, mixed_barc_tar, \
 no_bar, unID_subseq, unID_endseq, short, unidentified_seq] 
 
-# Run tests for analyze_sequence
-def run_tests(test_type, testseq_list, tol):
+# Perfect test cases
+o_bar0 = testseq('barcode 0', \
+    sticky_end + barcode + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_barc0 = testseq('barcode 0 comp', \
+    sticky_end + barcodec + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_bar1 = testseq('barcode 1', \
+    sticky_end + barcode1 + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_barc1 = testseq('barcode 1 comp', \
+    sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_bar0bar1 = testseq('barcode 0 barcode 1', \
+    sticky_end + barcode + sticky_end + barcode1 + sticky_end + barcode + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_barc0barc1 = testseq('barcode comp 0 barcode 1 comp', \
+    sticky_end + barcodec1 + sticky_end + barcodec + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 0)
+
+# Approximate cases
+# Approximate cases: Barcode 0 only, 1 barcode error
+o_bar0_del = testseq('barcode 0 deletion', \
+    sticky_end + barcode_del + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_bar0_ins = testseq('barcode 0 insertion', \
+    sticky_end + barcode_ins + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_bar0_switch = testseq('barcode 0 switch', \
+    sticky_end + barcode_switch + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_bar0_swap = testseq('barcode 0 swap', \
+    sticky_end + barcode_swap + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_barc0_del = testseq('barcode 0 comp deletion', \
+    sticky_end + barcodec_del + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_barc0_ins = testseq('barcode 0 comp insertion', \
+    sticky_end + barcodec_ins + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_barc0_switch = testseq('barcode 0 comp switch', \
+    sticky_end + barcodec_switch + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_barc0_swap = testseq('barcode 0 comp swap', \
+    sticky_end + barcodec_swap + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+# Approximate cases: Barcode 1 only, 1 barcode error
+o_bar1_del = testseq('barcode 1 deletion', \
+    sticky_end + barcode1_del + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_bar1_ins = testseq('barcode 1 insertion', \
+    sticky_end + barcode1_ins + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_bar1_switch = testseq('barcode 1 switch', \
+    sticky_end + barcode1_switch + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_bar1_swap = testseq('barcode 1 swap', \
+    sticky_end + barcode1_swap + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_barc1_del = testseq('barcode 1 comp deletion', \
+    sticky_end + barcodec1_del + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_barc1_ins = testseq('barcode 1 comp insertion', \
+    sticky_end + barcodec1_ins + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_barc1_switch = testseq('barcode 1 comp switch', \
+    sticky_end + barcodec1_switch + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_barc1_swap = testseq('barcode 1 comp swap', \
+    sticky_end + barcodec1_swap + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+# Approximate cases: Barcode 0 only, 1 random barcode error
+o_bar0_del_rand = testseq('barcode 0 deletion rand', \
+    sticky_end + rand_barcode_del + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_bar0_ins_rand = testseq('barcode 0 insertion rand', \
+    sticky_end + rand_barcode_ins + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_bar0_switch_rand = testseq('barcode 0 switch rand', \
+    sticky_end + rand_barcode_switch + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_bar0_swap_rand = testseq('barcode 0 swap rand', \
+    sticky_end + rand_barcode_swap + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_barc0_del_rand = testseq('barcode 0 comp deletion rand', \
+    sticky_end + rand_barcodec_del + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_barc0_ins_rand = testseq('barcode 0 comp insertion rand', \
+    sticky_end + rand_barcodec_ins + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_barc0_switch_rand = testseq('barcode 0 comp switch rand', \
+    sticky_end + rand_barcodec_switch + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_barc0_swap_rand = testseq('barcode 0 comp swap rand', \
+    sticky_end + rand_barcodec_swap + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+# Approximate cases: Barcode 1 only, 1 random barcode error
+o_bar1_del_rand = testseq('barcode 1 deletion rand', \
+    sticky_end + rand_barcode1_del + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_bar1_ins_rand = testseq('barcode 1 insertion rand', \
+    sticky_end + rand_barcode1_ins + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_bar1_switch_rand = testseq('barcode 1 switch rand', \
+    sticky_end + rand_barcode1_switch + sticky_end + barcode1 + sticky_end + barcode1+ sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_bar1_swap_rand = testseq('barcode 1 swap rand', \
+    sticky_end + rand_barcode1_swap + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_barc1_del_rand = testseq('barcode 1 comp deletion rand', \
+    sticky_end + rand_barcodec1_del + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_barc1_ins_rand = testseq('barcode 1 comp insertion rand', \
+    sticky_end + rand_barcodec1_ins + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_barc1_switch_rand = testseq('barcode 1 comp switch rand', \
+    sticky_end + rand_barcodec1_switch + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+o_barc1_swap_rand = testseq('barcode 1 comp swap rand', \
+    sticky_end + rand_barcodec1_swap + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([0,3]), 0, False, 1)
+
+# Approximate cases: Barcode 0 + Barcode 1 errors
+o_bar0_bar1_del = testseq('barcode 0 barcode 1 deletion', \
+    sticky_end + barcode1_del + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_bar0_bar1_ins = testseq('barcode 0 barcode 1 insertion', \
+    sticky_end + barcode1_ins + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_bar0_bar1_switch = testseq('barcode 0 barcode 1 switch', \
+    sticky_end + barcode1_switch + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_bar0_bar1_swap = testseq('barcode 0 barcode 1 swap', \
+    sticky_end + barcode1_swap + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_barc0_barc1_del = testseq('barcode 0 comp barcode 1 deletion', \
+    sticky_end + barcodec1_del + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_barc0_barc1_ins = testseq('barcode 0 comp barcode 1 insertion', \
+    sticky_end + barcodec1_ins + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_barc0_barc1_switch = testseq('barcode 0 comp barcode 1 switch', \
+    sticky_end + barcodec1_switch + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_barc0_barc1_swap = testseq('barcode 0 comp barcode 1 swap', \
+    sticky_end + barcodec1_swap + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+# Approximate cases: Barcode + barcode errors
+o_bar1_bar0_del = testseq('barcode 1 barcode 0 deletion', \
+    sticky_end + barcode_del + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_bar0_ins = testseq('barcode 1 barcode 0 insertion', \
+    sticky_end + barcode_ins + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_bar0_switch = testseq('barcode 1 barcode 0 switch', \
+    sticky_end + barcode_switch + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_bar0_swap = testseq('barcode 1 barcode 0 swap', \
+    sticky_end + barcode_swap + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+    
+o_barc1_barc0_del = testseq('barcode 1 comp barcode 0 comp deletion', \
+    sticky_end + barcodec_del + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_barc0_ins = testseq('barcode 1 comp barcode 0 comp insertion', \
+    sticky_end + barcodec_ins + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_barc0_switch = testseq('barcode 1 comp barcode 0 comp switch', \
+    sticky_end + barcodec_switch + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_barc0_swap = testseq('barcode 1 comp barcode 0 comp swap', \
+    sticky_end + barcodec_swap + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+# Approximation cases: Barcode 0 + barcode random errors
+o_bar0_bar1_del_rand = testseq('barcode 0 barcode 1 rand deletion', \
+    sticky_end + rand_barcode1_del + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_bar0_bar1_ins_rand = testseq('barcode 0 barcode 1 rand insertion', \
+    sticky_end + rand_barcode1_ins + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_bar0_bar1_switch_rand = testseq('barcode 0 barcode 1 rand switch', \
+    sticky_end + rand_barcode1_switch + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_bar0_bar1_swap_rand = testseq('barcode 0 barcode 1 rand swap', \
+    sticky_end + rand_barcode1_swap + sticky_end + barcode + sticky_end + barcode + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_barc0_barc1_del_rand = testseq('barcode 0 comp barcode 1 comp rand deletion', \
+    sticky_end + rand_barcodec1_del + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_barc0_barc1_ins_rand = testseq('barcode 0 comp barcode 1 comp rand insertion', \
+    sticky_end + rand_barcodec1_ins + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_barc0_barc1_switch_rand = testseq('barcode 0 comp barcode 1 comp rand switch', \
+    sticky_end + rand_barcodec1_switch + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+o_barc0_barc1_swap_rand = testseq('barcode 0 comp barcode 1 comp rand swap', \
+    sticky_end + rand_barcodec1_swap + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([2,1]), 0, False, 0)
+
+# Approximation cases: Barcode 1 + barcode random errors
+o_bar1_bar0_del_rand = testseq('barcode 1 barcode 0 rand deletion', \
+    sticky_end + rand_barcode_del + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_bar0_ins_rand = testseq('barcode 1 barcode 0 rand insertion', \
+    sticky_end + rand_barcode_ins + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_bar0_switch_rand = testseq('barcode 1 barcode 0 rand switch', \
+    sticky_end + rand_barcode_switch + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_bar0_swap_rand = testseq('barcode 1 barcode 0 rand swap', \
+    sticky_end + rand_barcode_swap + sticky_end + barcode1 + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_barc0_del_rand = testseq('barcode 1 comp barcode comp 0 rand deletion', \
+    sticky_end + rand_barcodec_del + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_barc0_ins_rand = testseq('barcode 1 comp barcode comp 0 rand insertion', \
+    sticky_end + rand_barcodec_ins + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_barc0_switch_rand = testseq('barcode 1 comp barcode comp 0 rand switch', \
+    sticky_end + rand_barcodec_switch + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_barc0_swap_rand = testseq('barcode 1 comp barcode comp 0 rand swap', \
+    sticky_end + rand_barcodec_swap + sticky_end + barcodec1 + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+
+# Approximate cases: Barcode 1 random error + Random barcode 0 deletion
+o_bar1_del_bar0_del_rand = testseq('barcode 1 deletion barcode 0 rand deletion', \
+    sticky_end + rand_barcode_del + sticky_end + rand_barcode1_del + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_ins_bar0_del_rand = testseq('barcode 1 insertion barcode 0 rand deletion', \
+    sticky_end + rand_barcode_del + sticky_end + rand_barcode1_ins + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_switch_bar0_del_rand = testseq('barcode 1 switch barcode 0 rand deletion', \
+    sticky_end + rand_barcode_del + sticky_end + rand_barcode1_switch + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_swap_bar0_del_rand = testseq('barcode 1 swap barcode 0 rand deletion', \
+    sticky_end + rand_barcode_del + sticky_end + rand_barcode1_swap + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_del_barc0_del_rand = testseq('barcode 1 comp deletion barcode comp 0 rand deletion', \
+    sticky_end + rand_barcodec_del + sticky_end + rand_barcodec1_del + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_ins_barc0_del_rand = testseq('barcode 1 comp insertion barcode comp 0 rand deletion', \
+    sticky_end + rand_barcodec_del + sticky_end + rand_barcodec1_ins + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_switch_barc0_del_rand = testseq('barcode 1 comp switch barcode comp 0 rand deletion', \
+    sticky_end + rand_barcodec_del + sticky_end + rand_barcodec1_switch + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_swap_barc0_del_rand = testseq('barcode 1 comp swap barcode comp 0 rand deletion', \
+    sticky_end + rand_barcodec_del + sticky_end + rand_barcodec1_swap + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+# Approximate cases: Barcode 1 random error + Random barcode 0 insertion
+o_bar1_del_bar0_ins_rand = testseq('barcode 1 deletion barcode 0 rand insertion', \
+    sticky_end + rand_barcode_ins + sticky_end + rand_barcode1_del + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_ins_bar0_ins_rand = testseq('barcode 1 insertion barcode 0 rand insertion', \
+    sticky_end + rand_barcode_ins + sticky_end + rand_barcode1_ins + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_switch_bar0_ins_rand = testseq('barcode 1 switch barcode 0 rand insertion', \
+    sticky_end + rand_barcode_ins + sticky_end + rand_barcode1_switch + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_swap_bar0_ins_rand = testseq('barcode 1 swap barcode 0 rand insertion', \
+    sticky_end + rand_barcode_ins + sticky_end + rand_barcode1_swap + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_del_barc0_ins_rand = testseq('barcode 1 comp deletion barcode comp 0 rand insertion', \
+    sticky_end + rand_barcodec_ins + sticky_end + rand_barcodec1_del + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_ins_barc0_ins_rand = testseq('barcode 1 comp insertion barcode comp 0 rand insertion', \
+    sticky_end + rand_barcodec_ins + sticky_end + rand_barcodec1_ins + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_switch_barc0_ins_rand = testseq('barcode 1 comp switch barcode comp 0 rand insertion', \
+    sticky_end + rand_barcodec_ins + sticky_end + rand_barcodec1_switch + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_swap_barc0_ins_rand = testseq('barcode 1 comp swap barcode comp 0 rand insertion', \
+    sticky_end + rand_barcodec_ins + sticky_end + rand_barcodec1_swap + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+# Approximate cases: Barcode 1 random error + Random barcode 0 switch
+o_bar1_del_bar0_switch_rand = testseq('barcode 1 deletion barcode 0 rand switch', \
+    sticky_end + rand_barcode_switch + sticky_end + rand_barcode1_del + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_ins_bar0_switch_rand = testseq('barcode 1 insertion barcode 0 rand switch', \
+    sticky_end + rand_barcode_switch + sticky_end + rand_barcode1_ins + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_switch_bar0_switch_rand = testseq('barcode 1 switch barcode 0 rand switch', \
+    sticky_end + rand_barcode_switch + sticky_end + rand_barcode1_switch + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_swap_bar0_switch_rand = testseq('barcode 1 swap barcode 0 rand switch', \
+    sticky_end + rand_barcode_switch + sticky_end + rand_barcode1_swap + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_del_barc0_switch_rand = testseq('barcode 1 comp deletion barcode comp 0 rand switch', \
+    sticky_end + rand_barcodec_switch + sticky_end + rand_barcodec1_del + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_ins_barc0_switch_rand = testseq('barcode 1 comp insertion barcode comp 0 rand switch', \
+    sticky_end + rand_barcodec_switch + sticky_end + rand_barcodec1_ins + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_switch_barc0_switch_rand = testseq('barcode 1 comp switch barcode comp 0 rand switch', \
+    sticky_end + rand_barcodec_switch + sticky_end + rand_barcodec1_switch + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_swap_barc0_switch_rand = testseq('barcode 1 comp swap barcode comp 0 rand switch', \
+    sticky_end + rand_barcodec_switch + sticky_end + rand_barcodec1_swap + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+# Approximate cases: Barcode 1 random error + Random barcode 0 swap
+o_bar1_del_bar0_swap_rand = testseq('barcode 1 deletion barcode 0 rand swap', \
+    sticky_end + rand_barcode_swap + sticky_end + rand_barcode1_del + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_ins_bar0_swap_rand = testseq('barcode 1 insertion barcode 0 rand swap', \
+    sticky_end + rand_barcode_swap + sticky_end + rand_barcode1_ins + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_switch_bar0_swap_rand = testseq('barcode 1 switch barcode 0 rand swap', \
+    sticky_end + rand_barcode_swap + sticky_end + rand_barcode1_switch + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_bar1_swap_bar0_swap_rand = testseq('barcode 1 swap barcode 0 rand swap', \
+    sticky_end + rand_barcode_swap + sticky_end + rand_barcode1_swap + sticky_end + barcode1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_del_barc0_swap_rand = testseq('barcode 1 comp deletion barcode comp 0 rand swap', \
+    sticky_end + rand_barcodec_swap + sticky_end + rand_barcodec1_del + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_ins_barc0_swap_rand = testseq('barcode 1 comp insertion barcode comp 0 rand swap', \
+    sticky_end + rand_barcodec_swap + sticky_end + rand_barcodec1_ins + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_switch_barc0_swap_rand = testseq('barcode 1 comp switch barcode comp 0 rand swap', \
+    sticky_end + rand_barcodec_swap + sticky_end + rand_barcodec1_switch + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+o_barc1_swap_barc0_swap_rand = testseq('barcode 1 comp swap barcode comp 0 rand swap', \
+    sticky_end + rand_barcodec_swap + sticky_end + rand_barcodec1_swap + sticky_end + barcodec1 + sticky_end, \
+    np.array([1,2]), 0, False, 1)
+
+# Approximation cases: Sticky end errors
+o_bar0_sticky_del = testseq('barcode 0 sticky end deletion', \
+    sticky_end + barcodec + sticky_del + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_bar0_sticky_ins = testseq('barcode 0 sticky end insertion', \
+    sticky_end + barcodec + sticky_ins + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_bar0_sticky_switch = testseq('barcode 0 sticky end switch', \
+    sticky_end + barcodec + sticky_switch + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+o_bar0_sticky_swap = testseq('barcode 0 sticky end swap', \
+    sticky_end + barcodec + sticky_swap + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([3,0]), 0, False, 0)
+
+# Error cases
+o_unID_subseq = testseq('unidentified subsequence', \
+    sticky_end + 'whatisthis' + sticky_end + barcodec + sticky_end + barcodec + sticky_end, \
+    np.array([2,0]), 1, True, 0)
+
+o_unID_endseq = testseq('unidentified end subsequence', \
+    sticky_end + barcodec + sticky_end + barcodec + sticky_end + barcodec + sticky_end \
+    + 'whatisthis', np.array([3,0]), 1, True, 0)
+
+o_short = testseq('short', 'whatisthis', np.zeros(2), 1, True, -2)
+
+o_unidentified_seq = testseq('unidentified sequence', \
+    'whatisthiswhatisthiswhatisthiswhatisthiswhatisthis', np.array([0,0]), 1, True, -2)
+
+o_perfect_seq_list = [o_bar0, o_barc0, o_bar1, o_barc1, o_bar0bar1, o_barc0barc1]
+
+o_approx_seq_list = [o_bar0_del, o_bar0_ins, o_bar0_switch, o_bar0_swap, \
+o_barc0_del, o_barc0_ins, o_barc0_switch, o_barc0_swap, 
+o_bar1_del, o_bar1_ins, o_bar1_switch, o_bar1_swap, \
+o_barc1_del, o_barc1_ins, o_barc1_switch, o_barc1_swap, \
+o_bar0_del_rand, o_bar0_ins_rand, o_bar0_switch_rand, o_bar0_swap_rand, \
+o_barc0_del_rand, o_barc0_ins_rand, o_barc0_switch_rand, o_barc0_swap_rand, \
+o_bar1_del_rand, o_bar1_ins_rand, o_bar1_switch_rand, o_bar1_swap_rand, \
+o_barc1_del_rand, o_barc1_ins_rand, o_barc1_switch_rand, o_barc1_swap_rand, \
+o_bar0_bar1_del, o_bar0_bar1_ins, o_bar0_bar1_switch, o_bar0_bar1_swap, \
+o_barc0_barc1_del, o_barc0_barc1_ins, o_barc0_barc1_switch, o_barc0_barc1_swap, \
+o_bar1_bar0_del, o_bar1_bar0_ins, o_bar1_bar0_switch, o_bar1_bar0_swap, \
+o_barc1_barc0_del, o_barc1_barc0_ins, o_barc1_barc0_switch, o_barc1_barc0_swap, \
+o_bar0_bar1_del_rand, o_bar0_bar1_ins_rand, o_bar0_bar1_switch_rand, o_bar0_bar1_swap_rand, \
+o_barc0_barc1_del_rand, o_barc0_barc1_ins_rand, o_barc0_barc1_switch_rand, o_barc0_barc1_swap_rand, \
+o_bar1_bar0_del_rand, o_bar1_bar0_ins_rand, o_bar1_bar0_switch_rand, o_bar1_bar0_swap_rand, \
+o_barc1_barc0_del_rand, o_barc1_barc0_ins_rand, o_barc1_barc0_switch_rand, o_barc1_barc0_swap_rand, \
+o_bar1_del_bar0_del_rand, o_bar1_ins_bar0_del_rand, o_bar1_switch_bar0_del_rand, o_bar1_swap_bar0_del_rand, \
+o_barc1_del_barc0_del_rand, o_barc1_ins_barc0_del_rand, o_barc1_switch_barc0_del_rand, o_barc1_swap_barc0_del_rand, \
+o_bar1_del_bar0_ins_rand, o_bar1_ins_bar0_ins_rand, o_bar1_switch_bar0_ins_rand, o_bar1_swap_bar0_ins_rand, \
+o_barc1_del_barc0_ins_rand, o_barc1_ins_barc0_ins_rand, o_barc1_switch_barc0_ins_rand, o_barc1_swap_barc0_ins_rand, \
+o_bar1_del_bar0_switch_rand, o_bar1_ins_bar0_switch_rand, o_bar1_switch_bar0_switch_rand, o_bar1_swap_bar0_switch_rand, \
+o_barc1_del_barc0_switch_rand, o_barc1_ins_barc0_switch_rand, o_barc1_switch_barc0_switch_rand, o_barc1_swap_barc0_switch_rand, \
+o_bar1_del_bar0_swap_rand, o_bar1_ins_bar0_swap_rand, o_bar1_switch_bar0_swap_rand, o_bar1_swap_bar0_swap_rand, \
+o_barc1_del_barc0_swap_rand, o_barc1_ins_barc0_swap_rand, o_barc1_switch_barc0_swap_rand, o_barc1_swap_barc0_swap_rand, \
+o_bar0_sticky_del, o_bar0_sticky_ins, o_bar0_sticky_switch, o_bar0_sticky_swap] 
+
+o_error_seq_list = [o_unID_subseq, o_unID_endseq, o_short]
+
+# Run tests for analyze_barcoded_seq
+def run_tests(test_type, testseq_list, tol, barcoded=True):
     tests_passed = 0
     for testseq in testseq_list:
         test_name = testseq.test_name
@@ -1028,7 +1581,10 @@ def run_tests(test_type, testseq_list, tol):
         has_error = testseq.has_error
         true_ID = testseq.true_ID
         answer = (true_count, true_error, has_error, true_ID)
-        tests_passed += test_sequence_print(sequence, test_name, tol, answer)
+        if barcoded:
+            tests_passed += test_barcoded_sequence_print(sequence, test_name, tols, answer)
+        else:
+            tests_passed += test_sequence_print(sequence, test_name, barcode_tols, answer)
     print('Passed {}/{} {} tests'.format(tests_passed, \
         len(testseq_list), test_type))
 
@@ -1036,8 +1592,16 @@ def run_tests(test_type, testseq_list, tol):
 # run_tests('approx', approx_seq_list, 0.9)
 # run_tests('error', error_seq_list, 0.9)
 
-# Run a specifict test for analyze_sequence
-def run_test(testseq, tol):
+# run_tests('barcode only perfect', o_perfect_seq_list, 0.9, barcoded=False)
+# run_tests('barcode only approx', o_approx_seq_list, 0.9, barcoded=False)
+# run_tests('barcode only error', o_error_seq_list, 0.9, barcoded=False)
+
+print(barcode)
+print(barcodec)
+print(barcode1)
+print(barcodec1)
+# Run a specifict test for analyze_barcoded_seq
+def run_test(testseq, tol, barcoded=True):
     test_name = testseq.test_name
     sequence = testseq.sequence
     true_count = testseq.true_count
@@ -1045,11 +1609,12 @@ def run_test(testseq, tol):
     has_error = testseq.has_error
     true_ID = testseq.true_ID
     answer = (true_count, true_error, has_error, true_ID)
-    test_sequence_print(sequence, test_name, tol, answer)
+    if barcoded:
+        test_barcoded_sequence_print(sequence, test_name, tols, answer)
+    else:
+        test_sequence_print(sequence, test_name, barcode_tols, answer)
 
-# run_test(no_bar, 0.9)
-
-
+# run_test(unidentified_seq, 0.9)
 
 # # Test make_dictionary
 # # No errors, should work fine
@@ -1087,6 +1652,106 @@ def run_test(testseq, tol):
 #         file.write('+\n')
 #         file.write('qualityscore{}\n'.format(i))
 
-with open('test_perturb.txt', 'w') as file:
-    file.write('1e-6\t0\n')
-    file.write('0\t1.5e-6\n')
+# with open('test_perturb.txt', 'w') as file:
+#     file.write('1e-6\t0\n')
+#     file.write('0\t1.5e-6\n')
+
+
+# # Check Levenshtein distances
+# barcode_del_lv_b = 'ATGAGGACGAATCTCCCGCTTATAd'
+# barcode_del_lv_b2 = 'TGAGGACGAATCTCCCGCTTATAdd'
+# barcode_del_lv = 'TATGAGGACGATCTCCCGCTTATAd'
+# barcode_ins_lv_b = 'iTATGAGGACGAATCTCCCGCTTAT'
+# barcode_ins_lv = 'TATGAGGACGAATCiTCCCGCTTAT'
+# barcode_swap_lv_b = 'ATTGAGGACGAATCTCCCGCTTATA'
+# barcode_swap_lv = 'TATGAGGACGAACTTCCCGCTTATA'
+
+# sticky_barcode_del_lv_b = 'GCATATGAGGACGAATCTCCCGCTTATATGCAd'
+# sticky_barcode_del_lv = 'TGCATATGAGGACGATCTCCCGCTTATATGCAd'
+# sticky_barcode_ins_lv_b = 'iTGCATATGAGGACGAATCTCCCGCTTATATGC'
+# sticky_barcode_ins_lv = 'TGCATATGAGGACGAATCiTCCCGCTTATATGC'
+# sticky_barcode_swap_lv_b = 'TGCAATTGAGGACGAATCTCCCGCTTATATGCA'
+# sticky_barcode_swap_lv = 'TGCATATGAGGACGAACTTCCCGCTTATATGCA'
+
+# target_del_lv_b = 'TGGTCGAATCAAGGGGAGGd'
+# target_del_lv = 'ATGGTCGAATAAGGGGAGGd'
+# target_ins_lv_b = 'iATGGTCGAATCAAGGGGAG'
+# target_ins_lv = 'ATGGTCGAATCiAAGGGGAG'
+# target_swap_lv_b = 'TAGGTCGAATCAAGGGGAGG'
+# target_swap_lv = 'ATGGTCGAACTAAGGGGAGG'
+# sticky_target_del_lv_b = 'TGCATGGTCGAATCAAGGGGAGGTGCAd'
+# sticky_target_del_lv = 'TGCAATGGTCGAATAAGGGGAGGdTGCA'
+# sticky_target_ins_lv_b = 'iTGCAATGGTCGAATCAAGGGGAGGTGC'
+# sticky_target_ins_lv = 'TGCAATGGTCGAATCiAAGGGGAGGTGC'
+# sticky_target_swap_lv_b = 'TGCATAGGTCGAATCAAGGGGAGGTGCA'
+# sticky_target_swap_lv = 'TGCAATGGTCGAACTAAGGGGAGGTGCA'
+
+# sticky_barcode = 'TGCATATGAGGACGAATCTCCCGCTTATATGCA'
+# sticky_target = 'TGCAATGGTCGAATCAAGGGGAGGTGCA'
+
+# barcode_del_lv_b_score = 1-jf.levenshtein_distance(barcode_del_lv_b, barcode)/barcode_len
+# barcode_del_lv_b2_score = 1-jf.levenshtein_distance(barcode_del_lv_b2, barcode)/barcode_len
+# barcode_del_lv_score = 1-jf.levenshtein_distance(barcode_del_lv, barcode)/barcode_len
+# barcode_ins_lv_b_score = 1-jf.levenshtein_distance(barcode_ins_lv_b, barcode)/barcode_len
+# barcode_ins_lv_score = 1-jf.levenshtein_distance(barcode_ins_lv, barcode)/barcode_len
+# barcode_swap_lv_b_score = 1-jf.levenshtein_distance(barcode_swap_lv_b, barcode)/barcode_len
+# barcode_swap_lv_score = 1-jf.levenshtein_distance(barcode_swap_lv, barcode)/barcode_len
+# sticky_barcode_del_lv_b_score = 1-jf.levenshtein_distance(sticky_barcode_del_lv_b, sticky_barcode)/sticky_barcode_len
+# sticky_barcode_del_lv_score = 1-jf.levenshtein_distance(sticky_barcode_del_lv, sticky_barcode)/sticky_barcode_len
+# sticky_barcode_ins_lv_b_score = 1-jf.levenshtein_distance(sticky_barcode_ins_lv_b, sticky_barcode)/sticky_barcode_len
+# sticky_barcode_ins_lv_score = 1-jf.levenshtein_distance(sticky_barcode_ins_lv, sticky_barcode)/sticky_barcode_len
+# sticky_barcode_swap_lv_b_score = 1-jf.levenshtein_distance(sticky_barcode_swap_lv_b, sticky_barcode)/sticky_barcode_len
+# sticky_barcode_swap_lv_score = 1-jf.levenshtein_distance(sticky_barcode_swap_lv, sticky_barcode)/sticky_barcode_len
+# target_del_lv_b_score = 1-jf.levenshtein_distance(target_del_lv_b, target)/target_len
+# target_del_lv_score = 1-jf.levenshtein_distance(target_del_lv, target)/target_len
+# target_ins_lv_b_score = 1-jf.levenshtein_distance(target_ins_lv_b, target)/target_len
+# target_ins_lv_score = 1-jf.levenshtein_distance(target_ins_lv, target)/target_len
+# target_swap_lv_b_score = 1-jf.levenshtein_distance(target_swap_lv_b, target)/target_len
+# target_swap_lv_score = 1-jf.levenshtein_distance(target_swap_lv, target)/target_len
+# sticky_target_del_lv_b_score = 1-jf.levenshtein_distance(sticky_target_del_lv_b, sticky_target)/sticky_target_len
+# sticky_target_del_lv_score = 1-jf.levenshtein_distance(sticky_target_del_lv, sticky_target)/sticky_target_len
+# sticky_target_ins_lv_b_score = 1-jf.levenshtein_distance(sticky_target_ins_lv_b, sticky_target)/sticky_target_len
+# sticky_target_ins_lv_score = 1-jf.levenshtein_distance(sticky_target_ins_lv, sticky_target)/sticky_target_len
+# sticky_target_swap_lv_b_score = 1-jf.levenshtein_distance(sticky_target_swap_lv_b, sticky_target)/sticky_target_len
+# sticky_target_swap_lv_score = 1-jf.levenshtein_distance(sticky_target_swap_lv, sticky_target)/sticky_target_len
+
+# print('barcode')
+# print(f'del b score:{barcode_del_lv_b_score}')
+# print(f'del b2 score:{barcode_del_lv_b2_score}')
+# print(f'del score:{barcode_del_lv_score}')
+# print(f'ins b score:{barcode_ins_lv_b_score}')
+# print(f'ins score:{barcode_ins_lv_score}')
+# print(f'swap b score:{barcode_swap_lv_b_score}')
+# print(f'swap score:{barcode_swap_lv_score}')
+# print('sticky_barcode')
+# print(f'del b score:{sticky_barcode_del_lv_b_score}')
+# print(f'del score:{sticky_barcode_del_lv_score}')
+# print(f'ins b score:{sticky_barcode_ins_lv_b_score}')
+# print(f'ins score:{sticky_barcode_ins_lv_score}')
+# print(f'swap b score:{sticky_barcode_swap_lv_b_score}')
+# print(f'swap score:{sticky_barcode_swap_lv_score}')
+# print('target')
+# print(f'del b score:{target_del_lv_b_score}')
+# print(f'del score:{target_del_lv_score}')
+# print(f'ins b score:{target_ins_lv_b_score}')
+# print(f'ins score:{target_ins_lv_score}')
+# print(f'swap b score:{target_swap_lv_b_score}')
+# print(f'swap score:{target_swap_lv_score}')
+# print('sticky_target')
+# print(f'del b score:{sticky_target_del_lv_b_score}')
+# print(f'del score:{sticky_target_del_lv_score}')
+# print(f'ins b score:{sticky_target_ins_lv_b_score}')
+# print(f'ins score:{sticky_target_ins_lv_score}')
+# print(f'swap b score:{sticky_target_swap_lv_b_score}')
+# print(f'swap score:{sticky_target_swap_lv_score}')
+
+# print(1-1/barcode_len)
+# print(1-2/barcode_len)
+# print(1-3/barcode_len)
+# print(1-4/barcode_len)
+
+# test_tol = 2
+# print(f'target tol: {calc_tol(test_tol,target_len)}')
+# print(f'barcode tol: {calc_tol(test_tol,barcode_len)}')
+# print(f'sticky target tol: {calc_tol(test_tol,sticky_target_len)}')
+# print(f'sticky barcode tol: {calc_tol(test_tol,sticky_barcode_len)}')

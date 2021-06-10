@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import math
+import numpy as np
 
 def read_eq_data_file(file_name):
     '''
@@ -48,9 +49,15 @@ def read_eq_data_file(file_name):
             elif index == 3:
                 N_runs = int(line_list[3])
             elif index == 4:
-                Pmin = float(line_list[3])
+                if len(line_list) == 4
+                    Pmin = float(line_list[3])
+                else:
+                    Pmin = np.asarray(line_list[3:],dtype=np.float64) 
             elif index == 5:
-                Pmax = float(line_list[3])
+                if len(line_list) == 4
+                    Pmax = float(line_list[3]) 
+                else:
+                    Pmax = np.asarray(line_list[3:],dtype=np.float64)
             elif index == 6:
                 Ai = float(line_list[3])
             else:

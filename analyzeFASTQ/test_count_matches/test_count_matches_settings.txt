@@ -1,0 +1,11 @@
+target_file_path: /Users/emilywu/Dropbox (MIT)/Emily <-> Ashwin/PerturbativeQuantification/PertQuant/analyzeFASTQ/test_count_matches/test_targets.txt
+handle_repeat_error: False 
+# save_path: /Users/emilywu/Dropbox (MIT)/Emily <-> Ashwin/PerturbativeQuantification/PertQuant/analyzeFASTQ/test_count_matches/test_counts
+# barcode_file_path: /Users/emilywu/Dropbox (MIT)/Emily <-> Ashwin/PerturbativeQuantification/PertQuant/analyzeFASTQ/test_count_matches/test_barcodes.txt
+# repeat_list: 
+# n_repeat: 
+# target_sticky: 
+# barcode_sticky: 
+# sticky_end: 
+# min_len: 
+# record: 

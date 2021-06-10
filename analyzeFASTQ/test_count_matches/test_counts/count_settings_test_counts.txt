@@ -1,0 +1,10 @@
+# Targets = 2 
+0 ATGGTCGAATCAAGGGGAGG 
+1 GGGAGCCTCTATCGTGTTGT 
+# Barcodes = 0 
+# Analysis Settings 
+min_len = 6 
+handle_repeat_error = False 
+repeat_list = [] 
+n_repeat = 0 
+# Notes 
