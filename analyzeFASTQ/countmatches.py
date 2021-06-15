@@ -643,7 +643,13 @@ def write_header_file(save_folder, save_file_name, target_dict, \
         # n_repeat to 0
         repeat_list = []
         n_repeat = 0
-    header_file.write(f'repeat_list = {repeat_list} \n')
+    if repeat_list == []:
+        header_file.write(f'repeat_list = {repeat_list} \n')
+    else:
+        header_file.write('repeat_list =')
+        for repeat in repeat_list:
+            header_file.write(f" {repeat}")
+        header_file.write("\n")
     header_file.write(f'n_repeat = {n_repeat} \n')
 
     # Add note section
