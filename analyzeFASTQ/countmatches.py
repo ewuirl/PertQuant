@@ -7,6 +7,7 @@ import argparse
 from pathlib import Path
 import os
 import time
+import beepy as bp
 
 
 def read_settings(settings_path):
@@ -183,10 +184,10 @@ def make_dictionary(file_name, sticky_end="TGCA", is_sticky=True):
             # Stop the script execution
             sys.exit(1)
 
-def check_min_unique_len(target_list, min_len, barcode_list=[], \
+def check_list_min_unique_len(target_list, min_len, barcode_list=[], \
     record=False):
     """
-    check_min_unique_len_record(target_list, min_len, barcode_list=[], 
+    check_list_min_unique_len(target_list, min_len, barcode_list=[], 
     record=False))
 
     Takes in a list of target sequences and their complements and determines if 
@@ -303,7 +304,8 @@ def check_min_unique_len(target_list, min_len, barcode_list=[], \
 def find_min_unique_len(target_list, min_unique_len=5, barcode_list=[], \
     record=False):
     """
-    find_min_unique_len(target_list, min_unique_len=4, barcode_list=[])
+    find_min_unique_len(target_list, min_unique_len=5, barcode_list=[], \
+    record=False)
 
     Takes in a list of target sequences and their complements and finds the 
     minimum length min_len such that subsequences of this length of the target and
@@ -353,19 +355,22 @@ def find_min_unique_len(target_list, min_unique_len=5, barcode_list=[], \
     else:
         max_len = len(target_list[0])
 
+    # Subtract 1 from the min length because the loop adds one immediately
+    min_unique_len -= 1
+
     # Check for the minimum subsequence length, starting at min_unique_len
     while found == False and min_unique_len <= max_len:
-        min_unique_len = min_unique_len + 1
+        min_unique_len += 1
         print(f'checking {min_unique_len}')
         if record:
             found, tt_list, tb_list, bb_list \
-            = check_min_unique_len(target_list, min_unique_len, \
+            = check_list_min_unique_len(target_list, min_unique_len, \
                 barcode_list=barcode_list, record=record)
             target_target_list.append(tt_list)
             target_barcode_list.append(tb_list)
             barcode_barcode_list.append(bb_list)
         else:
-            found = check_min_unique_len(target_list, min_unique_len, \
+            found = check_list_min_unique_len(target_list, min_unique_len, \
                 barcode_list=barcode_list)
         print(f'found = {found}')
     print(f'found min len: {min_unique_len}')
@@ -670,7 +675,7 @@ def init_save_file(read_file_path, save_folder, save_file_name, \
     read_file_name = read_file_list[-1].replace(".fastq","")
 
     # Open the save file
-    save_file = open(f"{save_folder}/{read_file_name}_{save_file_name}.dat", "w")
+    save_file = open(f"{save_folder}/{read_file_name}_{save_file_name}_counts.dat", "w")
 
     # Write where the analysis settings are saved
     save_file.write(f"# Data info and analysis settings in {header_file_name}\n")
@@ -736,6 +741,9 @@ if __name__ == "__main__":
         messages.")
     parser.add_argument("--pf", type=bool, help="If True, finds the pass and fail \
         folders and analyzes fastq files in both.")
+    parser.add_argument("--beep", type=int, help="Plays a sound using beepy when \
+        the program finishes running. To pick a sound, provide an integer from \
+        1-7. To not play a sound, set to 0. Defaults to 1.")
     args = parser.parse_args()
 
     # Parse the arguments
@@ -754,6 +762,10 @@ if __name__ == "__main__":
         pf = args.pf 
     else:
         pf = False
+    if args.beep:
+        which_beep = args.beep 
+    else:
+        which_beep = 1
 
     # Read in the settings file
     save_path, target_file_path, barcode_file_path, handle_repeat_error, \
@@ -841,7 +853,10 @@ if __name__ == "__main__":
     end = time.perf_counter()
     print("Time elapsed: {} second(s)".format(end-start))
 
-
+    if which_beep > 0:
+        bp.beep(sound=which_beep)
+    else:
+        pass
 
     # # # Test Functions
 

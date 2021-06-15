@@ -33,6 +33,18 @@ def read_counts(file_name, array):
                 array[index] = float(count)
                 index += 1
 
+def read_binned_counts(count_file_path, array):
+    with open(count_file_path, 'r') as file:
+        index = 0
+        while True:
+            line = file.readline()
+            if not line:
+                break
+            line = line.rstrip("\n")
+            count_line_list = [int(i) for i in count_line.split()]
+            array[index,:] = np.array(count_line_list)
+            index += 1
+
 def power_func(x, S, p):
     return S*p ** x
 

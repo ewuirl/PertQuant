@@ -1,7 +1,6 @@
 import sys
 sys.path.append('../')
 from simCRN.ml_nupack import gen_complement
-from analyzeFASTQ.countmatches import read_settings
 import argparse
 from pathlib import Path
 import numpy as np
@@ -10,6 +9,7 @@ import datetime as dt
 import matplotlib.pyplot as plt 
 import os
 import time
+import beepy as bp
 
 def get_count_settings(count_settings_path):
     # Open the settings file to find the target file path
@@ -19,9 +19,11 @@ def get_count_settings(count_settings_path):
         line = lines[0].rstrip("\n")
         line_list = line.split()
         n_targets = int(line_list[3])
+        target_list = []
         target_lengths = []
         for i in range(n_targets):
             target = lines[i+1].rstrip("\n").split()[1]
+            target_list.append(target)
             target_lengths.append(len(target))
 
         # Get number of barcodes
@@ -52,8 +54,8 @@ def get_count_settings(count_settings_path):
         line_list = line.split()
         n_repeat = int(line_list[2])
 
-    return (n_targets, target_lengths, n_barcodes, min_len, handle_repeat_error, \
-        repeat_list, n_repeat)
+    return (n_targets, target_list, target_lengths, n_barcodes, min_len, \
+        handle_repeat_error, repeat_list, n_repeat)
 
 def get_seq_info(seq_ID, features):
     seq_ID_list = seq_ID.split()
@@ -261,6 +263,9 @@ if __name__ == "__main__":
     parser.add_argument("--Qbin", type=float, help="Bins counts by the ")
     parser.add_argument("--Qhist", type=bool, help="If True, makes a histogram \
         of the average Q scores of the sequences.")
+    parser.add_argument("--beep", type=int, help="Plays a sound using beepy when \
+        the program finishes running. To pick a sound, provide an integer from \
+        1-7. To not play a sound, set to 0. Defaults to 1.")
     args = parser.parse_args()
 
     # Parse the arguments
@@ -308,13 +313,20 @@ if __name__ == "__main__":
     else:
         Phist = False
 
+    if args.beep:
+        which_beep = args.beep 
+    else:
+        which_beep = 1
+
+
     # Get all the dat files
     dat_files = Path(dat_folder).rglob("*.dat")
     dat_file_list = [str(file) for file in dat_files]
 
     # Get the number of targets
-    n_targets, target_lengths, n_barcodes, min_len, handle_repeat_error, \
-        repeat_list, n_repeat = get_count_settings(count_settings_path)
+    n_targets, target_list, target_lengths, n_barcodes, min_len, \
+    handle_repeat_error, repeat_list, n_repeat = \
+    get_count_settings(count_settings_path)
 
     # Set some default globals
     P_corr_step = 0.05
@@ -360,7 +372,6 @@ if __name__ == "__main__":
         # Write the summedd counts to save files
         write_summed_counts_Pbin(save_folder, save_file_name, Pbin, \
             total_target_sum_array_list, total_targetc_sum_array_list, prog)
-
     else:
         pass
 
@@ -370,6 +381,10 @@ if __name__ == "__main__":
     else:
         pass
     
+    if which_beep > 0:
+        bp.beep(sound=which_beep)
+    else:
+        pass
 
     # # # Test functions
     # dat_file_path = "/Users/emilywu/OneDrive - Massachusetts Institute of Technology/Minion/BarcodeRatio/0-1ratio2-1/20210315_2220_MC-110826_0_AFO272_6d8d594b/counts/AFO272_fail_1d85e24b_0_0-1ratio2-1_counts.dat"
