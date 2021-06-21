@@ -59,15 +59,18 @@ def get_count_settings(count_settings_path):
 
 def get_seq_info(seq_ID, features):
     seq_ID_list = seq_ID.split()
-    run_time_str = seq_ID_list[4]
-    start_time = dt.datetime(int(run_time_str[11:15]), int(run_time_str[16:18]), \
-                int(run_time_str[19:21]), hour=int(run_time_str[22:24]), \
-                minute=int(run_time_str[25:27]), second=int(run_time_str[28:30]))
+    read_time_str = seq_ID_list[4]
     feature_list = features.split()
     avg_Q_score = float(feature_list[0])
     barcode_ID = int(feature_list[1])
     has_repeat_error = int(feature_list[2])
-    return(start_time, avg_Q_score, barcode_ID, has_repeat_error)
+    return(read_time_str, avg_Q_score, barcode_ID, has_repeat_error)
+
+def str_2_date_time(read_time_str):
+    read_time = dt.datetime(int(read_time_str[11:15]), int(read_time_str[16:18]), \
+                int(read_time_str[19:21]), hour=int(read_time_str[22:24]), \
+                minute=int(read_time_str[25:27]), second=int(read_time_str[28:30]))
+    return read_time 
 
 def make_count_save_folder(dat_folder, save_file, time_step, Qbin, Pbin):
     if time_step > 0.0:
@@ -109,7 +112,7 @@ def get_Q_scores(dat_file_path):
         for index in index_arr:
             seq_ID = lines[index].rstrip('\n')
             features = lines[index+1].rstrip('\n')
-            start_time, avg_Q_score, barcode_ID, has_repeat_error = get_seq_info(seq_ID, features)
+            read_time_str, avg_Q_score, barcode_ID, has_repeat_error = get_seq_info(seq_ID, features)
             avg_Q_score_arr[int((index-1)/(2+2*n_targets))] = avg_Q_score
         
         # Return the array
@@ -139,6 +142,7 @@ def read_dat_file_Pbin(dat_file_path):
     global min_len
     global barcoded 
     global prog
+    global Pbin
     global P_corr_bins
 
     with open(dat_file_path, 'r') as dat_file:
@@ -166,7 +170,7 @@ def read_dat_file_Pbin(dat_file_path):
             # Get sequence info
             seq_ID = seq_ID.rstrip('\n')
             features = dat_file.readline().rstrip('\n')
-            start_time, avg_Q_score, barcode_ID, has_repeat_error = get_seq_info(seq_ID, features)
+            read_time_str, avg_Q_score, barcode_ID, has_repeat_error = get_seq_info(seq_ID, features)
 
             # Calculate P(corr)
             seq_P_corr = 1.0 - 10.0 ** (-avg_Q_score/10.0)
@@ -193,7 +197,7 @@ def read_dat_file_Pbin(dat_file_path):
             pass
         return(target_sum_array_list, targetc_sum_array_list)
 
-def read_dat_file_Pbin_parallel(dat_file_list, target_lengths):
+def read_dat_file_bin_parallel(bin_range, bin_func, dat_file_list, target_lengths):
     total_target_sum_array_list = []
     total_targetc_sum_array_list = []
     for i in range(n_targets):
@@ -202,11 +206,11 @@ def read_dat_file_Pbin_parallel(dat_file_list, target_lengths):
         max_num_subseqs = target_len - min_len + 1
         # Calculate the count array length
         array_len = int(max_num_subseqs * (max_num_subseqs+1)/2)
-        total_target_sum_array_list.append(np.zeros((len(P_corr_bins),array_len), dtype=int))
-        total_targetc_sum_array_list.append(np.zeros((len(P_corr_bins),array_len), dtype=int))
+        total_target_sum_array_list.append(np.zeros((len(bin_range),array_len), dtype=int))
+        total_targetc_sum_array_list.append(np.zeros((len(bin_range),array_len), dtype=int))
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        results = executor.map(read_dat_file_Pbin, dat_file_list)
+        results = executor.map(bin_func, dat_file_list)
         for result in results:
             # Unpack the subsequence counts
             target_sum_array_list, targetc_sum_array_list = result
@@ -214,6 +218,68 @@ def read_dat_file_Pbin_parallel(dat_file_list, target_lengths):
                 total_target_sum_array_list[i] += target_sum_array_list[i]
                 total_targetc_sum_array_list[i] += targetc_sum_array_list[i]
     return (total_target_sum_array_list, total_targetc_sum_array_list)
+
+def read_dat_file_time(dat_file_path):
+    global n_targets
+    global target_lengths
+    global n_barcodes
+    global min_len
+    global barcoded 
+    global prog
+    global time_range
+    global time_step_td
+
+    with open(dat_file_path, 'r') as dat_file:
+        header = dat_file.readline()
+        # Set up the lists of summed arrays
+    
+        target_sum_array_list = []
+        targetc_sum_array_list = []
+        for i in range(n_targets):
+            target_len = target_lengths[i]
+            # Figure out the maximum nunber of subsequences possible
+            max_num_subseqs = target_len - min_len + 1
+            # Calculate the count array length
+            array_len = int(max_num_subseqs * (max_num_subseqs+1)/2)
+            target_sum_array_list.append(np.zeros((len(time_range),array_len), dtype=int))
+            targetc_sum_array_list.append(np.zeros((len(time_range),array_len), dtype=int))
+        else:
+            pass
+
+        while True:
+            # Read the sequence ID
+            seq_ID = dat_file.readline()
+            if not seq_ID:
+                break
+            # Get sequence info
+            seq_ID = seq_ID.rstrip('\n')
+            features = dat_file.readline().rstrip('\n')
+            read_time_str, avg_Q_score, barcode_ID, has_repeat_error = get_seq_info(seq_ID, features)
+            read_time = str_2_date_time(read_time_str)
+
+            # Figure out which bin to use
+            current_bin = 0
+
+            # Check if the next bin up should be used and make sure the last bin
+            # Catches everything greater than the lower bound of the last bin
+            while read_time >= time_range[current_bin] + time_step_td \
+            and current_bin + 1 < len(time_range):
+                current_bin += 1
+
+            # Get count info
+            for i in range(n_targets):
+                # Get target count info
+                target_sum_array_list[i][current_bin,:] += read_count_line(dat_file)
+                # Get complement count info
+                targetc_sum_array_list[i][current_bin,:] += read_count_line(dat_file)
+        
+        if prog:
+            dat_file_name = dat_file_path.split("/")[-1]
+            dat_file_name_list = dat_file_name.split("_")
+            print(f"Finished counting {dat_file_name_list[1]} file {dat_file_name_list[3]} count data.")
+        else:
+            pass
+        return(target_sum_array_list, targetc_sum_array_list)
 
 def write_summed_counts_array(save_file_path, summed_counts_array):
     with open(save_file_path, 'w') as save_file:
@@ -224,13 +290,25 @@ def write_summed_counts_array(save_file_path, summed_counts_array):
             save_file.write("\n")
 
 
-def write_summed_counts_Pbin(save_folder, save_file_name, Pbin, \
+def write_summed_counts(save_folder, save_file_name, Pbin, Qbin, time_step, \
     total_target_sum_array_list, total_targetc_sum_array_list, prog):
     for i in range(len(total_targetc_sum_array_list)):
         # Make the paths for the save files
-        Pbin_name = f"_Pbin-{Pbin:.2f}".replace(".", "-")
-        target_save_file_path = f"{save_folder}/{save_file_name}{Pbin_name}_{i}_counts.txt"
-        targetc_save_file_path = f"{save_folder}/{save_file_name}{Pbin_name}_{i}_comp_counts.txt"
+        if Pbin > 0.0:
+            Pbin_name = f"_Pbin-{Pbin:.2f}".replace(".", "-")
+        else:
+            Pbin_name = ""
+        if Qbin > 0.0:
+            Qbin_name = f"_Qbin-{Qbin:.2f}".replace(".", "-")
+        else:
+            Qbin_name = ""
+        if time_step > 0.0:
+            tstep_name = f"_tstep-{time_step}"
+        else:
+            tstep_name = ""
+
+        target_save_file_path = f"{save_folder}/{save_file_name}{tstep_name}{Qbin_name}{Pbin_name}_{i}_counts.txt"
+        targetc_save_file_path = f"{save_folder}/{save_file_name}{tstep_name}{Qbin_name}{Pbin_name}_{i}_comp_counts.txt"
         # Write the counts to the save files
         write_summed_counts_array(target_save_file_path, total_target_sum_array_list[i])
         write_summed_counts_array(targetc_save_file_path, total_targetc_sum_array_list[i])
@@ -238,6 +316,82 @@ def write_summed_counts_Pbin(save_folder, save_file_name, Pbin, \
             print(f"Finished writing target {i} count data.")
         else:
             pass
+
+def get_sum_settings(sum_count_folder, has_time_step=False, has_Pbin=False, has_Qbin=False):
+    sum_count_list = sum_count_folder.split("_")
+    # Set default values
+    time_step = 0
+    Pbin = 0.0
+    Qbin = 0.0
+
+    assert has_Pbin==False or has_Qbin==False, "Pbin and Qbin cannot both be > 0"
+
+    # Figure out what the sum settings were
+    # Figure out the time step if it was used
+    if has_time_step and has_Pbin:
+        time_step_str = sum_count_list[-2]
+        time_step = int(time_step_str.replace("tstep-",""))
+    elif has_time_step and has_Qbin:
+        time_step_str = sum_count_list[-2]
+        time_step = int(time_step_str.replace("tstep-",""))    
+    elif has_time_step and has_Pbin == False and has_Qbin == False:
+        time_step_str = sum_count_list[-1]
+        time_step = int(time_step_str.replace("tstep-",""))
+    else:
+        pass
+    # Handle Q score or P(correct) binning if they were used
+    if has_Pbin:
+        Pbin_str = sum_count_list[-1]
+        Pbin = float(Pbin_str.replace("Pbin-","").replace("-","."))
+    elif has_Qbin:
+        Qbin_str = sum_count_list[-1]
+        Qbin = float(Qbin_str.replace("Qbin-","").replace("-","."))
+    else:
+        pass
+
+    return (time_step, Pbin, Qbin)
+
+def get_time_range(time_step, run_length, sum_count_folder):
+    """
+    get_time_range(time_step, run_length, sum_count_folder)
+
+    Takes in a time step in minutes, and a run length in hours, and sum_count_folder,
+    the path to a folder containing dat files. It figures out the start and end 
+    times of the run, and generates a time step range and list of corresponding 
+    timedeltas. 
+
+    Arguments:
+        time_step (int/float): a time step in minutes to bin the data into.
+        run_length (int/float): the length of the sequencing run in hours.
+        sum_count_folder (str): a string representing the path to a folder 
+            containing dat files.
+
+    Returns:
+        start_time (datetime): a datetime object of the start time of the run.
+        end_time (datetime): a datetime object of the end time of the run.
+        time_step_range (range): a range object with bounds [time_step, run_length (min)]
+        time_range (list): a list of timedelta objects corresponding to the 
+            values in time_step_range
+        
+
+    """
+    sum_count_folder_list = sum_count_folder.split("/")
+    folder_name = sum_count_folder_list[-2] # change to -2
+    folder_name_list = folder_name.split("_")
+    date = folder_name_list[0]
+    time = folder_name_list[1]
+    start_time = dt.datetime(int(date[:4]), int(date[4:6]), \
+        int(date[6:8]), hour=int(time[:2]), minute=int(time[2:]))
+
+    # Prepare lists of time steps
+    time_step_range = range(time_step,run_length*60+time_step, time_step)
+    time_range = []
+    for i in range(len(time_step_range)):
+        delta_time = dt.timedelta(minutes=time_step_range[i])
+        time_range.append(start_time+delta_time)
+
+    end_time = time_range[-1]
+    return(start_time, end_time, time_step_range, time_range)
 
 if __name__ == "__main__":
     # Argument parser
@@ -255,6 +409,8 @@ if __name__ == "__main__":
         sort results by the barcode.")
     parser.add_argument("--time", type=int, help="Bins counts by the \
         provided time step in minutes. Default is to not bin by time.")
+    parser.add_argument("--run", type=int, help="The length of the sequencing run \
+        in hours. Defaults to 24 hours.")
     parser.add_argument("--prog", type=bool, help="If True, prints progress \
         messages.")
     parser.add_argument("--Pbin", type=float, help="Bins counts by the ")
@@ -287,6 +443,11 @@ if __name__ == "__main__":
         time_step = args.time
     else:
         time_step = 0
+
+    if args.run:
+        run_length = run
+    else:
+        run_length = 24 # Default sequencing run length is 24 hours
 
     if args.Qbin:
         Qbin = args.Qbin
@@ -328,10 +489,7 @@ if __name__ == "__main__":
     handle_repeat_error, repeat_list, n_repeat = \
     get_count_settings(count_settings_path)
 
-    # Set some default globals
-    P_corr_step = 0.05
-    P_corr_bins = np.arange(0, 1, P_corr_step)
-
+    
     # Make avg Q score histogram
     if Qhist:
         all_Q_score_arr = get_Q_scores_parallel(dat_file_list)
@@ -363,17 +521,35 @@ if __name__ == "__main__":
     else:
         pass
 
-    # Time the counting
     if Pbin > 0.0 and time_step == 0.0:
+        # Set some globals
+        P_corr_bins = np.arange(0, 1, Pbin)
+        
         # Sum and bin the counts according to average P(corr)
         total_target_sum_array_list, total_targetc_sum_array_list = \
-        read_dat_file_Pbin_parallel(dat_file_list, target_lengths)
+        read_dat_file_bin_parallel(P_corr_bins, read_dat_file_Pbin, dat_file_list, target_lengths)
 
         # Write the summedd counts to save files
-        write_summed_counts_Pbin(save_folder, save_file_name, Pbin, \
+        write_summed_counts(save_folder, save_file_name, Pbin, Qbin, time_step, \
             total_target_sum_array_list, total_targetc_sum_array_list, prog)
     else:
         pass
+
+    if Pbin == 0.0 and Qbin == 0.0 and time_step > 0.0:
+        # Get the time range info
+        start_time, end_time, time_step_range, time_range = get_time_range(time_step, run_length, dat_folder)
+        time_step_td = dt.timedelta(minutes=time_step)
+
+        # Sum and bin the counts according to average P(corr)
+        total_target_sum_array_list, total_targetc_sum_array_list = \
+        read_dat_file_bin_parallel(time_range, read_dat_file_time, dat_file_list, target_lengths)
+
+        # Write the summedd counts to save files
+        write_summed_counts(save_folder, save_file_name, Pbin, Qbin, time_step, \
+            total_target_sum_array_list, total_targetc_sum_array_list, prog)
+    else:
+        pass
+
 
     if time_step > 0 or Pbin > 0 or Qbin > 0:
         end = time.perf_counter()
@@ -387,7 +563,7 @@ if __name__ == "__main__":
         pass
 
     # # # Test functions
-    # dat_file_path = "/Users/emilywu/OneDrive - Massachusetts Institute of Technology/Minion/BarcodeRatio/0-1ratio2-1/20210315_2220_MC-110826_0_AFO272_6d8d594b/counts/AFO272_fail_1d85e24b_0_0-1ratio2-1_counts.dat"
+    dat_file_path = "/Users/emilywu/OneDrive - Massachusetts Institute of Technology/Minion/BarcodeRatio/0-1ratio2-1/20210315_2220_MC-110826_0_AFO272_6d8d594b/counts/AFO272_fail_1d85e24b_0_0-1ratio2-1_counts.dat"
 
 
     # # Test get_Q_scores
@@ -413,3 +589,7 @@ if __name__ == "__main__":
 
     # Test make_count_save_folder
     # save_folder = make_count_save_folder(dat_folder, save_file_name, time_step, Qbin, Pbin)
+
+    # # Test read_dat_file_time
+    # target_sum_array_list, targetc_sum_array_list = read_dat_file_time(dat_file_path)
+    # print(target_sum_array_list[0])
