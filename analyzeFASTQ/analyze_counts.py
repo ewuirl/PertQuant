@@ -118,15 +118,15 @@ def fit_func(func, x_fit, array):
     perr = np.sqrt(np.diag(pcov))
     return(fit_params, fit, pcov, perr)
 
-def sum_fit_func(count_arr, x_fit, seq_len, min_len):
-    # Create an array to store the summed values in 
-    summed_counts_arr = np.zeros(seq_len-min_len+1)
-    # Sum the counts
-    calc_sum(count_arr, summed_counts_arr, seq_len, min_len)
-    # Fit the summed counts
-    fit_params, fit, pcov, perr = fit_func(summed_power_func, x_fit, \
-        summed_counts_arr)
-    return (summed_counts_arr, fit_params, fit, pcov, perr)
+# def sum_fit_func(count_arr, x_fit, seq_len, min_len):
+#     # Create an array to store the summed values in 
+#     summed_counts_arr = np.zeros(seq_len-min_len+1)
+#     # Sum the counts
+#     calc_sum(count_arr, summed_counts_arr, seq_len, min_len)
+#     # Fit the summed counts
+#     fit_params, fit, pcov, perr = fit_func(summed_power_func, x_fit, \
+#         summed_counts_arr)
+#     return (summed_counts_arr, fit_params, fit, pcov, perr)
 
 def sum_fit_arr(target_bin_array, x_fit, seq_len, min_len, bin_range):
     # Create lists to store data in
