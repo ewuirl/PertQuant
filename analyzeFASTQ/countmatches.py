@@ -7,10 +7,39 @@ import argparse
 from pathlib import Path
 import os
 import time
+import matplotlib.pyplot as plt 
 import beepy as bp
 
 
 def read_settings(settings_path):
+    """
+    read_settings(settings_path)
+
+    This function takes in a path to a settings file and reads it to obtain 
+    settings to use for counting subsequence matches.
+
+    Arguments:
+        settings_path (str): /path/to/count/settings/file. This is the count 
+        settings
+
+    Returns: 
+        (save_path, target_file_path, barcode_file_path, handle_repeat_error, \
+        repeat_list, n_repeat, target_sticky, barcode_sticky, sticky_end, min_len, \
+        record) (tuple)
+            save_path (str): /path/to/save/folder/. This is the path to the 
+            folder to save the count data files to.
+            target_file_path (str): This is the path to a text file containing
+            the target sequences. 
+            barcode_file_path (str): 
+            handle_repeat_error (bool): 
+            repeat_list (list): 
+            n_repeat (int): 
+            target_sticky (bool): 
+            barcode_sticky (bool): 
+            sticky_end (str): 
+            min_len (int): 
+            record (bool): 
+    """
     with open(settings_path, 'r') as file:
         lines = file.readlines()
         for line in lines:
@@ -588,7 +617,7 @@ def analyze_seq(index):
         # Store the counts
         target_count_list.append(count_array)
         targetc_count_list.append(comp_count_array)
-    return(seq_ID, avg_Q_score, barcode_ID, has_repeat_error, target_count_list, targetc_count_list)
+    return(seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, target_count_list, targetc_count_list)
 
 def make_save_folder(fastq_folder, save_path="counts"):
 
@@ -682,10 +711,10 @@ def init_save_file(read_file_path, save_folder, save_file_name, \
 
     return save_file
 
-def write_dat_file(save_file, seq_ID, avg_Q_score, barcode_ID, has_repeat_error, \
+def write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, has_repeat_error, \
     target_count_list, targetc_count_list):
     save_file.write(f"{seq_ID}\n")
-    save_file.write(f"{avg_Q_score} {barcode_ID} {has_repeat_error}\n")
+    save_file.write(f"{avg_Q_score} {seq_len} {barcode_ID} {has_repeat_error}\n")
     for i in range(len(target_count_list)):
         # Write target subsequence counts to save ffile
         target_array = target_count_list[i]
@@ -734,13 +763,17 @@ if __name__ == "__main__":
         containing count analysis settings.")
     parser.add_argument("save_file", type=str, help="The name extension to add to \
         save file names that results are saved to.")
+    parser.add_argument("--Lhist", type=bool, help="If True, makes a histogram \
+        of the sequence lengths. Defaults to False.")
+    parser.add_argument("--bins", type=bool, help="If provided, specifies the \
+        number of bins for the histogram. Defaults to 10.")
     parser.add_argument("--barcoded", type=bool, help="If True, the program will \
         try to identify the barcode ID of each sequence.")
     parser.add_argument("--note", type=str, help="Adds a note to the header file.")
     parser.add_argument("--prog", type=bool, help="If True, prints progress \
-        messages.")
+        messages. Defaults to False.")
     parser.add_argument("--pf", type=bool, help="If True, finds the pass and fail \
-        folders and analyzes fastq files in both.")
+        folders and analyzes fastq files in both. Defaults to False.")
     parser.add_argument("--beep", type=int, help="Plays a sound using beepy when \
         the program finishes running. To pick a sound, provide an integer from \
         1-7. To not play a sound, set to 0. Defaults to 1.")
@@ -762,6 +795,14 @@ if __name__ == "__main__":
         pf = args.pf 
     else:
         pf = False
+    if args.Lhist:
+        Lhist = args.Lhist
+    else:
+        Lhist = False
+    if args.bins:
+        bins = args.bins
+    else:
+        bins = 10
     if args.beep:
         which_beep = args.beep 
     else:
@@ -812,14 +853,17 @@ if __name__ == "__main__":
 
     # Create list of fastq files to analyze
     if pf:
-        fastq_pass_files = Path(f"{fastq_folder}/fastq_pass").rglob("*.fastq")
+        fastq_pass_files = Path(f"{fastq_folder}/fastq_pass").glob("*.fastq")
         fastq_pass_file_list = [str(file) for file in fastq_pass_files]
-        fastq_fail_files = Path(f"{fastq_folder}/fastq_fail").rglob("*.fastq")
-        fastq_fail_file_list = [str(file) for file in fastq_fail_files] 
+        fastq_fail_files = Path(f"{fastq_folder}/fastq_fail").glob("*.fastq")
+        fastq_fail_file_list = [str(file) for file in fastq_fail_files]
         fastq_file_list = fastq_pass_file_list + fastq_fail_file_list
     else:    
         fastq_files = Path(fastq_folder).rglob("*.fastq")
         fastq_file_list = [str(file) for file in fastq_files] 
+
+    # Make a list to contain sequence lengths
+    len_list = []
 
     # Analyze all the fastq files
     index = 0
@@ -833,16 +877,23 @@ if __name__ == "__main__":
         # Create a save file
         save_file = init_save_file(read_file_path, save_folder, save_file_name, \
             header_file_name)
-        # Parallelize the sunsequence counting
+        # Parallelize the subsequence counting
         with concurrent.futures.ProcessPoolExecutor() as executor:
             results = executor.map(analyze_seq, index_arr)
             for result in results:
                 # Unpack the subsequence counts
-                seq_ID, avg_Q_score, barcode_ID, has_repeat_error, \
+                seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
                 target_count_list, targetc_count_list = result
                 # Write the results to the save file
-                write_dat_file(save_file, seq_ID, avg_Q_score, barcode_ID, \
-                    has_repeat_error, target_count_list, targetc_count_list)
+                # write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, \
+                #     barcode_ID, has_repeat_error, target_count_list, \
+                #     targetc_count_list)
+                # If a sequence length histogram is being made, add the lengths
+                # to a list.
+                if Lhist:
+                    len_list.append(seq_len)
+                else:
+                    pass
         read_file.close()
         save_file.close()
         if prog:
@@ -850,6 +901,14 @@ if __name__ == "__main__":
             print(f"Analyzed {index}/{len(fastq_file_list)} files.")
         else:
             pass
+    if Lhist:
+        plt.hist(len_list,bins=bins)
+        plt.title('Sequence Length Histogram')
+        plt.xlabel('Sequence Length')
+        plt.ylabel('Number of Sequences')
+        plt.savefig(f'{save_folder}/sequence_length_hist_{save_file_name}.png')
+    else:
+        pass
     end = time.perf_counter()
     print("Time elapsed: {} second(s)".format(end-start))
 

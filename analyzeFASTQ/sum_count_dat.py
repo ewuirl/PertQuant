@@ -214,6 +214,7 @@ def read_dat_file_bin_parallel(bin_range, bin_func, dat_file_list, target_length
         for result in results:
             # Unpack the subsequence counts
             target_sum_array_list, targetc_sum_array_list = result
+            
             for i in range(len(targetc_sum_array_list)):
                 total_target_sum_array_list[i] += target_sum_array_list[i]
                 total_targetc_sum_array_list[i] += targetc_sum_array_list[i]
@@ -262,9 +263,10 @@ def read_dat_file_time(dat_file_path):
 
             # Check if the next bin up should be used and make sure the last bin
             # Catches everything greater than the lower bound of the last bin
-            while read_time >= time_range[current_bin] + time_step_td \
+            while read_time > time_range[current_bin] + time_step_td \
             and current_bin + 1 < len(time_range):
                 current_bin += 1
+            print(f"read_time: {read_time}, bin lower bound: {time_range[current_bin]}, bin # {current_bin}")
 
             # Get count info
             for i in range(n_targets):
@@ -384,7 +386,7 @@ def get_time_range(time_step, run_length, sum_count_folder):
         int(date[6:8]), hour=int(time[:2]), minute=int(time[2:]))
 
     # Prepare lists of time steps
-    time_step_range = range(time_step,run_length*60+time_step, time_step)
+    time_step_range = range(0,run_length*60, time_step)
     time_range = []
     for i in range(len(time_step_range)):
         delta_time = dt.timedelta(minutes=time_step_range[i])
@@ -392,6 +394,95 @@ def get_time_range(time_step, run_length, sum_count_folder):
 
     end_time = time_range[-1]
     return(start_time, end_time, time_step_range, time_range)
+
+def read_dat_file_all(dat_file_path):
+    global n_targets
+    global target_lengths
+    global n_barcodes
+    global min_len
+    global barcoded 
+    global prog
+
+    with open(dat_file_path, 'r') as dat_file:
+        header = dat_file.readline()
+        # Set up the lists of summed arrays
+    
+        target_sum_array_list = []
+        targetc_sum_array_list = []
+        for i in range(n_targets):
+            target_len = target_lengths[i]
+            # Figure out the maximum nunber of subsequences possible
+            max_num_subseqs = target_len - min_len + 1
+            # Calculate the count array length
+            array_len = int(max_num_subseqs * (max_num_subseqs+1)/2)
+            target_sum_array_list.append(np.zeros(array_len, dtype=int))
+            targetc_sum_array_list.append(np.zeros(array_len, dtype=int))
+        else:
+            pass
+
+        while True:
+            # Read the sequence ID
+            seq_ID = dat_file.readline()
+            if not seq_ID:
+                break
+            # Get sequence info
+            seq_ID = seq_ID.rstrip('\n')
+            features = dat_file.readline().rstrip('\n')
+
+            # Get count info
+            for i in range(n_targets):
+                # Get target count info
+                target_sum_array_list[i] += read_count_line(dat_file)
+                # Get complement count info
+                targetc_sum_array_list[i] += read_count_line(dat_file)
+        if prog:
+            dat_file_name = dat_file_path.split("/")[-1]
+            dat_file_name_list = dat_file_name.split("_")
+            print(f"Finished counting {dat_file_name_list[1]} file {dat_file_name_list[3]} count data.")
+        else:
+            pass
+        return(target_sum_array_list, targetc_sum_array_list)
+
+def read_dat_file_all_parallel(dat_file_list, target_lengths):
+    total_target_sum_array_list = []
+    total_targetc_sum_array_list = []
+    for i in range(n_targets):
+        target_len = target_lengths[i]
+        # Figure out the maximum nunber of subsequences possible
+        max_num_subseqs = target_len - min_len + 1
+        # Calculate the count array length
+        array_len = int(max_num_subseqs * (max_num_subseqs+1)/2)
+        total_target_sum_array_list.append(np.zeros(array_len, dtype=int))
+        total_targetc_sum_array_list.append(np.zeros(array_len, dtype=int))
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        results = executor.map(read_dat_file_all, dat_file_list)
+        for result in results:
+            # Unpack the subsequence counts
+            target_sum_array_list, targetc_sum_array_list = result
+            for i in range(len(target_sum_array_list)):
+                total_target_sum_array_list[i] += target_sum_array_list[i]
+                total_targetc_sum_array_list[i] += targetc_sum_array_list[i]
+    return (total_target_sum_array_list, total_targetc_sum_array_list)
+
+def write_all_summed_counts_array(save_file_path, summed_counts_array):
+    with open(save_file_path, 'w') as save_file:
+        for i in range(len(summed_counts_array)):
+            save_file.write(f"{summed_counts_array[i]}\t")
+
+def create_time_test_dat_file(bin_range, save_file_name):
+    with open(save_file_name, "w") as save_file:
+        save_file.write("# Data info and analysis settings in count_settings_0-1ratio1-1_0.txt\n")
+        for i in range(len(bin_range)):
+            time = bin_range[i]
+            start_time = f"{time.year}-{time.month:02d}-{time.day:02d}T{time.hour:02d}:{time.minute:02d}:{time.second:02d}Z"
+            save_file.write(f"@seq_id{i} runid={i} read=16 ch=122 start_time={start_time} flow_cell_id=AGP710 protocol_group_id=ExactBarcode sample_id=0-1_ratio_1-1_0\n")
+            save_file.write(f"{(i+1)/20} -1 -1\n")
+            for j in range(4):
+                for k in range(231):
+                    save_file.write(f"{j+1} ")
+                save_file.write("\n")
+
 
 if __name__ == "__main__":
     # Argument parser
@@ -445,7 +536,7 @@ if __name__ == "__main__":
         time_step = 0
 
     if args.run:
-        run_length = run
+        run_length = args.run
     else:
         run_length = 24 # Default sequencing run length is 24 hours
 
@@ -474,6 +565,11 @@ if __name__ == "__main__":
     else:
         Phist = False
 
+    if args.Lhist:
+        Lhist = args.Lhist
+    else:
+        Lhist = False
+
     if args.beep:
         which_beep = args.beep 
     else:
@@ -490,9 +586,14 @@ if __name__ == "__main__":
     get_count_settings(count_settings_path)
 
     
+    # Get avg Q scores for histograms
+    if Qhist or Phist:
+        all_Q_score_arr = get_Q_scores_parallel(dat_file_list)
+    else:
+        pass
+
     # Make avg Q score histogram
     if Qhist:
-        all_Q_score_arr = get_Q_scores_parallel(dat_file_list)
         plt.hist(all_Q_score_arr, bins=np.arange(0,23,1))
         plt.title('Average Q Scores')
         plt.xlabel('Average Q Scores')
@@ -503,13 +604,18 @@ if __name__ == "__main__":
 
     # Make avg P(corr) histogram
     if Phist:
-        all_Q_score_arr = get_Q_scores_parallel(dat_file_list)
         all_P_corr_arr = 1.0 - 10 ** (-all_Q_score_arr/10.0)
         plt.hist(all_P_corr_arr,bins=np.arange(0,1.1,0.05))
         plt.title('Average P(correct)')
         plt.xlabel('Average P(correct)')
         plt.ylabel('Number of Sequences')
         plt.savefig(f'{dat_folder}/average_P_corr_hist_{save_file_name}.png')
+
+    else:
+        pass
+
+    # Make length histogram
+    if Lhist:
 
     else:
         pass
@@ -539,6 +645,8 @@ if __name__ == "__main__":
         # Get the time range info
         start_time, end_time, time_step_range, time_range = get_time_range(time_step, run_length, dat_folder)
         time_step_td = dt.timedelta(minutes=time_step)
+        print(f"start time: {start_time}, bin 0 :{time_range[0]}")
+        print(f"end time: {end_time}, last bin :{time_range[-1]}")
 
         # Sum and bin the counts according to average P(corr)
         total_target_sum_array_list, total_targetc_sum_array_list = \
@@ -550,6 +658,14 @@ if __name__ == "__main__":
     else:
         pass
 
+    # start = time.perf_counter()
+    # total_target_sum_array_list, total_targetc_sum_array_list = read_dat_file_all_parallel(dat_file_list, target_lengths)
+    # time_step = 1
+    # for i in range(len(total_target_sum_array_list)):
+    #     save_file_path = f"{dat_folder}/all_target_{i}_counts.txt"
+    #     write_all_summed_counts_array(save_file_path, total_target_sum_array_list[i])
+    #     save_file_path = f"{dat_folder}/all_target_comp_{i}_counts.txt"
+    #     write_all_summed_counts_array(save_file_path, total_targetc_sum_array_list[i])
 
     if time_step > 0 or Pbin > 0 or Qbin > 0:
         end = time.perf_counter()
@@ -563,7 +679,9 @@ if __name__ == "__main__":
         pass
 
     # # # Test functions
-    dat_file_path = "/Users/emilywu/OneDrive - Massachusetts Institute of Technology/Minion/BarcodeRatio/0-1ratio2-1/20210315_2220_MC-110826_0_AFO272_6d8d594b/counts/AFO272_fail_1d85e24b_0_0-1ratio2-1_counts.dat"
+    # dat_file_path = "/Users/emilywu/OneDrive - Massachusetts Institute of Technology/Minion/BarcodeRatio/0-1ratio2-1/20210315_2220_MC-110826_0_AFO272_6d8d594b/counts/AFO272_fail_1d85e24b_0_0-1ratio2-1_counts.dat"
+    # dat_file_path = "/Users/emilywu/OneDrive - Massachusetts Institute of Technology/Minion/ExactBarcode/0-1_ratio_1-1_0/20210619_2330_MC-110826_0_AGP710_fa5cb0a9/counts/AGP710_pass_bb5f66e6_293_0-1ratio1-1_0_counts.dat"
+    # dat_file_path = "/Users/emilywu/OneDrive - Massachusetts Institute of Technology/Minion/ExactBarcode/0-1_ratio_1-1_0/20210619_2330_MC-110826_0_AGP710_fa5cb0a9/counts/AGP710_fail_bb5f66e6_0_0-1ratio1-1_0_counts.dat"
 
 
     # # Test get_Q_scores
@@ -573,12 +691,33 @@ if __name__ == "__main__":
 
 
     # # Test binning decision
+    # # Test P(corr) binning
+    # P_corr_bins = np.arange(0, 1, 0.05)
     # seq_P_corr_arr = np.arange(0,1.025,0.025)
     # for seq_P_corr in seq_P_corr_arr:
     #     P_corr_bin = 0
     #     while seq_P_corr >= P_corr_bins[P_corr_bin] + Pbin and P_corr_bin + 1 < len(P_corr_bins):
     #         P_corr_bin += 1
     #     print(f"P_corr: {seq_P_corr:.2f}, Bin lower bound: {P_corr_bins[P_corr_bin]:.2f}")
+
+    # # Test time binning
+    # # Prepare lists of time steps
+    # time_step = 30
+    # start_time, end_time, time_step_range, time_range = get_time_range(time_step, run_length, dat_folder)
+    # time_step_td = dt.timedelta(minutes=time_step)
+    # print(len(time_range))
+    # time_step_range = range(-30,run_length*60+30, 15)
+    # test_time_range = []
+    # for i in range(len(time_step_range)):
+    #     delta_time = dt.timedelta(minutes=time_step_range[i])
+    #     test_time_range.append(start_time+delta_time)
+    
+    # for read_time in test_time_range:
+    #     current_bin = 0
+    #     while read_time > time_range[current_bin] + time_step_td \
+    #     and current_bin + 1 < len(time_range):
+    #         current_bin += 1
+    #     print(f"time: {read_time}, Bin lower bound: {time_range[current_bin]}, Bin # {current_bin}")
 
 
     # # Test read_dat_file_Pbin
@@ -590,6 +729,25 @@ if __name__ == "__main__":
     # Test make_count_save_folder
     # save_folder = make_count_save_folder(dat_folder, save_file_name, time_step, Qbin, Pbin)
 
-    # # Test read_dat_file_time
+    # Test read_dat_file_time
+    # time_step = 30
+    # start_time, end_time, time_step_range, time_range = get_time_range(time_step, run_length, dat_folder)
+    # time_step_td = dt.timedelta(minutes=time_step)
+    # print(start_time, end_time, time_step_range, time_range)
+    # print(time_step_td)
     # target_sum_array_list, targetc_sum_array_list = read_dat_file_time(dat_file_path)
     # print(target_sum_array_list[0])
+
+
+    # # Make test time binning file
+    # time_step = 15
+    # run_length = 24.5
+    # time_step_td = dt.timedelta(minutes=time_step)
+    # time_step_range = np.arange(0, run_length*60, time_step)
+    # start_time = dt.datetime(2021, 6, 19, hour=23, minute=15)
+    # time_range = []
+    # save_file = "/Users/emilywu/OneDrive - Massachusetts Institute of Technology/Minion/ExactBarcode/0-1_ratio_1-1_0/20210619_2330_MC-110826_0_AGP710_fa5cb0a9/testcounts/test_time_counts.dat"
+    # for i in range(len(time_step_range)):
+    #     delta_time = dt.timedelta(minutes=time_step_range[i])
+    #     time_range.append(start_time+delta_time)
+    # create_time_test_dat_file(time_range, save_file)
