@@ -54,4 +54,23 @@ Last Updated 07/06/2021
         1.) To connect via SSH, see "Connecting to Minion with SSH" above. 
 
 
+# Unzipping .gz files
+
+    As of 2021, Nanopore fastq files are saved as .fastq.gz files. Before analysis
+    these files must be unzipped. To unzip all of the .gz files in a folder, use
+    the following command.
+
+        gunzip /path/to/.gz/files/*.gz
+
 # Counting Subsequence Matches
+
+
+# Making Read Length Histograms with NanoPlot
+
+    To make Read Length Histograms with NanoPlot:
+
+        NanoPlot_hist.sh --fastq fastq_file [fastq_file]
+
+    Example:
+
+        NanoPlot_hist.sh --fastq "/path/to/folder/with/fastq/files/"*.fastq "/path/to/folder/with/fastq/files/"*.fastq

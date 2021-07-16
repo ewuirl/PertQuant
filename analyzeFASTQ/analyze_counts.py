@@ -173,16 +173,17 @@ def sum_fit_arr(target_bin_array, x_fit, seq_len, min_len, bin_range, func):
     return(bin_list, summed_counts_list, params_list, fit_list, pcov_list, \
         perr_list)
 
-def time_fit_arr(target_bin_array, x_fit, func, is_sum, seq_len, min_len, num_bins, array_len):
+def time_fit_arr(target_bin_array, x_fit, func, is_sum, seq_len, min_len, array_len):
+    rows = len(target_bin_array)
     # Create lists to store data in
     if is_sum:
-        time_summed_counts_arr = np.zeros((num_bins,len(x_fit)))        
+        time_summed_counts_arr = np.zeros((rows,len(x_fit)))        
     else:
-        time_summed_counts_arr = np.zeros((num_bins,array_len))
-    params_arr = np.zeros((num_bins,2))
+        time_summed_counts_arr = np.zeros((rows,array_len))
+    params_arr = np.zeros((rows,2))
     fit_list = []
     pcov_list = []
-    perr_arr = np.zeros((num_bins,2))
+    perr_arr = np.zeros((rows,2))
     count_arr = np.zeros(array_len)
 
     for i in range(len(target_bin_array)):
@@ -375,7 +376,7 @@ def get_subsequence_counts(N, n, min_len, count_arr):
     Returns:
 
     """
-    assert (n<N), "The length of the target subsequences must be smaller than the target sequence length."
+    # assert (n<N), "The length of the target subsequences must be smaller than the target sequence length."
     assert (n>=min_len), "The length of the target subsequences must be greater than the minimum subsequence length."
 
     # Figure out the dimensions of the array to store the subsequence counts in
@@ -383,8 +384,6 @@ def get_subsequence_counts(N, n, min_len, count_arr):
     cols = int((n-min_len+1)*(n-min_len+2)/2)
     # Make an array to store the counts
     subseq_counts_array = np.zeros((rows,cols))
-    print(f"{rows},{cols}")
-    print(subseq_counts_array)
 
     # Iterate through all the subsequences of length n
     for i in range(rows):
@@ -404,40 +403,234 @@ def get_subsequence_counts(N, n, min_len, count_arr):
                 # Bump the index to account for which subsubsequence is being added
                 row_index += 1
                 # Add the subsubsequence count to the array
-                subseq_counts_array[i, row_index] = count_array[count_index + h]
+                subseq_counts_array[i, row_index] = count_arr[count_index + h]
     return(subseq_counts_array)
 
-def fit_counts_arr(counts_array, x_fit, func, is_sum, seq_len, min_len, num_bins, array_len):
-    # Create arrays and lists to store data in
+def bin_fit_arr(target_bin_array, x_fit, func, is_sum, seq_len, min_len):
+    rows = len(target_bin_array)
+    # Create lists to store data in
     if is_sum:
-        summed_counts_arr = np.zeros((num_bins,len(x_fit)))
-    # Don't need to re-save the counts arrays if they aren't summed.
+        all_summed_counts_arr = np.zeros((rows,len(x_fit)))        
     else:
-        summed_counts_arr = np.array([])
-    params_arr = np.zeros((num_bins,2))
+        all_summed_counts_arr = np.array([])
+    params_arr = np.zeros((rows,2))
     fit_list = []
     pcov_list = []
-    perr_arr = np.zeros((num_bins,2))
-    count_arr = np.zeros(array_len)
+    perr_arr = np.zeros((rows,2))
 
     for i in range(len(target_bin_array)):
+        count_arr = target_bin_array[i,:]
         # Check to see if counts for the bin are nonzero
         if is_sum:
             # Fit the subsequence counts
-            summed_counts, fit_params, fit, pcov, perr = \
+            summed_counts_arr, fit_params, fit, pcov, perr = \
             sum_fit_func(count_arr, x_fit, seq_len, min_len, func)
             # Save summed results to lists
-            summed_counts_arr[i,:] = summed_counts
+            all_summed_counts_arr[i,:] = summed_counts_arr
         else:
-            # Save summed results to lists
+            # Save fit results to lists
             fit_params, fit, pcov, perr = fit_func(func, x_fit, count_arr)
-        # Save fitresults to lists
+        # Save fit results to lists
         params_arr[i,:] = fit_params
         fit_list.append(fit)
         pcov_list.append(pcov)
         perr_arr[i,:] = perr
+        
+    return(all_summed_counts_arr, params_arr, fit_list, pcov_list, perr_arr)
 
-    return(summed_counts_arr, params_arr, fit_list, pcov_list, perr_arr)
+def make_x_fit_arr(seq_len, min_len):
+    # Figure out the maximum nunber of subsequences possible
+    max_num_subseqs = seq_len - min_len + 1
+    # Calculate the count array length
+    array_len = int(max_num_subseqs * (max_num_subseqs+1)/2)
+    # Create arrays for fitting
+    x_array = np.zeros(array_len)
+    # Fill in the x array
+    index = 0
+    for i in range(seq_len - min_len + 1):
+        for j in range(seq_len - min_len - i + 1):
+            x_array[index] = i + min_len
+            index += 1
+    x_fit = np.arange(min_len,seq_len+1)
+    return(x_array, x_fit)
+
+def fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len, N, min_len, \
+    fit_save_folder, power_func, summed_power_func, plot=True):
+    rows = int(((N-end_len+1)+(N-start_len+1))*(end_len-start_len+1)/2)
+    all_params_arr = np.zeros((rows,2))
+    all_perr_arr = np.zeros((rows,2))
+    all_params_arr_s = np.zeros((rows,2))
+    all_perr_arr_s = np.zeros((rows,2))
+    index = 0
+    for length in np.arange(start_len, end_len+1):
+        # Make x range arrays
+        subseq_counts = get_subsequence_counts(N, length, min_len, total_counts_arr)
+        x_arr, x_fit = make_x_fit_arr(length, min_len)
+        # Make the non summed fits
+        empty_counts_arr, params_arr, fit_list, pcov_list, perr_arr = \
+        bin_fit_arr(subseq_counts, x_arr, power_func, False, length, min_len)
+        # Make the summed fits
+        summed_counts_arr_s, params_arr_s, fit_list_s, pcov_list_s, perr_arr_s = \
+        bin_fit_arr(subseq_counts, x_fit, summed_power_func, True, length, min_len)
+        # Save the results
+        for i in range(len(params_arr)): 
+            all_params_arr[index,:] = params_arr[i,:]
+            all_perr_arr[index,:] = perr_arr[i,:]
+            all_params_arr_s[index,:] = params_arr_s[i,:]
+            all_perr_arr_s[index,:] = perr_arr_s[i,:]
+            # Increase the index
+            index += 1
+        print(f"saved the results of {length}")
+        # Save the plots
+        if plot:
+            plot_binned_fits(length, target, comp, x_arr, subseq_counts, params_arr, \
+                fit_list, perr_arr, fit_save_folder, sum=False, y_lims=(0,0), \
+                is_save=True)
+            plot_binned_fits(length, target, comp, x_fit, summed_counts_arr_s, params_arr_s, \
+                fit_list_s, perr_arr_s, fit_save_folder, sum=True, y_lims=(0,0), \
+                is_save=True)
+        else:
+            pass
+
+        print(f"Finished with length {length}.")
+
+    return(all_params_arr, all_perr_arr, all_params_arr_s, all_perr_arr_s)
+
+def sum_by_len_artificial_seq_fits(target_fit_arr0, target_error_arr0, comp_fit_arr1, \
+    comp_error_arr1, start_len, end_len, N, min_len):
+    # Create arrays for storing the average fit values in.
+    sum_param_arr = np.zeros(np.shape(target_fit_arr0))
+    sum_err_arr = np.zeros(np.shape(target_error_arr0))
+
+    # Make an index for storing values into the arrays
+    save_index = 0
+    target_index = 0
+    comp_index = -1
+    # Iterate through the fit values and average them
+    for i in np.arange(start_len, end_len + 1):
+        comp_index += N - i + 1
+        # Add up the param values + squared values
+        for j in range(N - i + 1):
+            print(f"target:{target_fit_arr0[target_index]}, comp: {comp_fit_arr1[comp_index]}")
+            # sum_param_arr[save_index] += target_fit_arr0[target_index,:] + \
+            # comp_fit_arr1[comp_index,:]
+            # sum_err_arr[save_index] += np.sqrt(target_error_arr0[target_index,:] ** 2.0 + \
+            #     comp_error_arr1[comp_index,:] ** 2.0)
+            # Increase the read index
+            target_index += 1
+            # Decrease the comp index
+            comp_index -= 1
+            # Increase the save index
+            save_index += 1
+        comp_index += N - i + 1
+    return(sum_param_arr, sum_err_arr)
+    
+def avg_by_len_artificial_seq_fits(fit_arr, fit_error_arr, start_len, end_len, N, min_len):
+    # Create arrays for storing the average fit values in.
+    array_len = end_len - start_len + 1
+    avg_param_arr = np.zeros(array_len)
+    avg_err_arr = np.zeros(array_len)
+    # Make an index for storing values into the arrays
+    save_index = 0
+    read_index = 0
+    # Iterate through the fit values and average them
+    for i in np.arange(start_len, end_len + 1):
+        # Create variables to sum param values + squared errors
+        sum_param = 0
+        square_err = 0
+        # Add up the param values + squared values
+        for j in range(N - i + 1):
+            sum_param += fit_arr[read_index,0]
+            square_err += fit_error_arr[read_index,0] ** 2.0
+            # Increase the read index
+            read_index += 1
+
+        # Take the average
+        avg_param_arr[save_index] = sum_param / (N - i + 1)
+        avg_err_arr[save_index] = np.sqrt(square_err) / (N - i + 1)
+
+        # Increase the save index
+        save_index += 1
+
+    return(avg_param_arr, avg_err_arr)
+
+def ratio_by_len_artificial_seq_fits(num_fit_arr, num_err_arr, den_fit_arr, \
+    den_err_arr, start_len, end_len, N):
+    # Make arrays to store values
+    array_len = 0
+    len_range = np.arange(start_len, end_len + 1)
+    for i in len_range:
+        array_len += (N - i + 1) ** 2.0
+    array_len = int(array_len)
+    ratio_arr = np.zeros((array_len, 2))
+    ratio_err_arr = np.zeros((array_len, 2))
+    avg_ratio_arr = np.zeros((len(len_range), 2))
+    avg_ratio_err_arr = np.zeros((len(len_range), 2))
+
+    save_index = 0
+    read_index = 0
+    # Iterate through the different strand lengths
+    for i in len_range:
+        # Iterate through the numerator fits for length i
+        for j in range(N - i + 1):
+            numerator = num_fit_arr[read_index+j,:]
+            num_error = num_err_arr[read_index+j,:]
+
+            # Iterate through the denominator fits for length i
+            for k in range(N - i + 1):
+                denominator = den_fit_arr[read_index+k,:]
+                den_error = den_err_arr[read_index+k,:]
+
+                # Calculate the ratio
+                ratio = numerator/denominator
+                # Calculate the ratio error
+                ratio_err = ratio * np.sqrt((num_error/numerator)**2.0 + \
+                    (den_error/denominator)**2.0)
+                # Save the results
+                ratio_arr[save_index] = ratio
+                ratio_err_arr[save_index] = ratio_err
+                # Increase the save index
+                save_index += 1
+        # Increase the read index
+        read_index += N - i + 1
+
+    # Calculate the averages
+    avg_save_index = 0
+    avg_read_index = 0
+    for i in len_range:
+        tot_ratio = 0
+        square_ratio_err = 0
+        
+        for j in range(int((N - i + 1) ** 2.0)):
+            tot_ratio += ratio_arr[avg_read_index]
+            square_ratio_err += ratio_err_arr[avg_read_index] ** 2.0
+            # Increase the read index
+            avg_read_index += 1
+
+        avg_ratio_arr[avg_save_index] = tot_ratio / ((N - i + 1) ** 2.0)
+        avg_ratio_err_arr[avg_save_index] = np.sqrt(square_ratio_err) / ((N - i + 1) ** 2.0)
+        # Increase the save index
+        avg_save_index += 1
+
+    return(ratio_arr, ratio_err_arr, avg_ratio_arr, avg_ratio_err_arr)
+
+
+def get_box_plot_data(ratio_arr, start_len, end_len, N):
+    box_plot_list = []
+    read_index = 0
+    for i in np.arange(start_len, end_len + 1):
+        array_index = 0
+        len_ratio_arr = np.zeros(int((N-i+1)**2.0))
+        for j in range(int((N-i+1)**2.0)):
+            len_ratio_arr[array_index] = ratio_arr[read_index,0]
+            # Increase the indices
+            read_index += 1
+            array_index += 1
+        # Add the array to the list
+        box_plot_list.append(len_ratio_arr)
+    return(box_plot_list)
+
+
 
 
 # # Test get_subsequence_counts

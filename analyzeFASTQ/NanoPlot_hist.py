@@ -1,5 +1,6 @@
 '''
-The main purpose of this script is to create plots for long read sequencing data.
+The main purpose of this script is to create read length histogram plots for 
+read sequencing data.
 Input data can be given as one or multiple of:
 -compressed, standard or streamed fastq file
 -compressed, standard or streamed fastq file, with
@@ -21,8 +22,9 @@ from nanoplot.version import __version__
 import nanoplotter
 import pickle
 import sys
+from nanoplot.NanoPlot import make_stats
 
-def cust_main():
+def hist_main():
     '''
     Organization function
     -setups logging
@@ -99,9 +101,10 @@ def cust_main():
         # else:
         #     plots = make_plots(datadf, settings)
         # make_report(plots, settings)
-        plots = cust_make_plots(datadf, settings)
+        plots = make_hist_plots(datadf, settings, args)
 
         logging.info("Finished!")
+
     except Exception as e:
         logging.error(e, exc_info=True)
         print("\n\n\nIf you read this then NanoPlot {} has crashed :-(".format(__version__))
@@ -111,7 +114,7 @@ def cust_main():
         print("Thanks!\n\n\n")
         raise
 
-def cust_make_plots(datadf, settings):
+def make_hist_plots(datadf, settings, args):
     '''
     Call plotting functions from nanoplotter
     settings["lengths_pointer"] is a column in the DataFrame specifying which lengths to use
@@ -169,4 +172,4 @@ def cust_make_plots(datadf, settings):
     return plots
 
 if __name__ == "__main__":
-    cust_main()
+    hist_main()

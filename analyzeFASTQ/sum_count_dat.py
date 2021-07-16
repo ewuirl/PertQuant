@@ -1,6 +1,6 @@
-import sys
-sys.path.append('../')
-from simCRN.ml_nupack import gen_complement
+# import sys
+# sys.path.append('../')
+from PertQuant.simCRN.ml_nupack import gen_complement
 import argparse
 from pathlib import Path
 import numpy as np
@@ -62,9 +62,10 @@ def get_seq_info(seq_ID, features):
     read_time_str = seq_ID_list[4]
     feature_list = features.split()
     avg_Q_score = float(feature_list[0])
-    barcode_ID = int(feature_list[1])
-    has_repeat_error = int(feature_list[2])
-    return(read_time_str, avg_Q_score, barcode_ID, has_repeat_error)
+    read_len = int(feature_list[1])
+    barcode_ID = int(feature_list[2])
+    has_repeat_error = int(feature_list[3])
+    return(read_time_str, avg_Q_score, read_len, barcode_ID, has_repeat_error)
 
 def str_2_date_time(read_time_str):
     read_time = dt.datetime(int(read_time_str[11:15]), int(read_time_str[16:18]), \
@@ -112,7 +113,8 @@ def get_Q_scores(dat_file_path):
         for index in index_arr:
             seq_ID = lines[index].rstrip('\n')
             features = lines[index+1].rstrip('\n')
-            read_time_str, avg_Q_score, barcode_ID, has_repeat_error = get_seq_info(seq_ID, features)
+            read_time_str, avg_Q_score, read_len, barcode_ID, has_repeat_error =\
+            get_seq_info(seq_ID, features)
             avg_Q_score_arr[int((index-1)/(2+2*n_targets))] = avg_Q_score
         
         # Return the array
@@ -170,7 +172,8 @@ def read_dat_file_Pbin(dat_file_path):
             # Get sequence info
             seq_ID = seq_ID.rstrip('\n')
             features = dat_file.readline().rstrip('\n')
-            read_time_str, avg_Q_score, barcode_ID, has_repeat_error = get_seq_info(seq_ID, features)
+            read_time_str, avg_Q_score, read_len, barcode_ID, has_repeat_error =\
+            get_seq_info(seq_ID, features)
 
             # Calculate P(corr)
             seq_P_corr = 1.0 - 10.0 ** (-avg_Q_score/10.0)
@@ -215,9 +218,10 @@ def read_dat_file_bin_parallel(bin_range, bin_func, dat_file_list, target_length
             # Unpack the subsequence counts
             target_sum_array_list, targetc_sum_array_list = result
             
-            for i in range(len(targetc_sum_array_list)):
+            for i in range(len(total_target_sum_array_list)):
                 total_target_sum_array_list[i] += target_sum_array_list[i]
                 total_targetc_sum_array_list[i] += targetc_sum_array_list[i]
+
     return (total_target_sum_array_list, total_targetc_sum_array_list)
 
 def read_dat_file_time(dat_file_path):
@@ -255,7 +259,8 @@ def read_dat_file_time(dat_file_path):
             # Get sequence info
             seq_ID = seq_ID.rstrip('\n')
             features = dat_file.readline().rstrip('\n')
-            read_time_str, avg_Q_score, barcode_ID, has_repeat_error = get_seq_info(seq_ID, features)
+            read_time_str, avg_Q_score, read_len, barcode_ID, has_repeat_error =\
+            get_seq_info(seq_ID, features)
             read_time = str_2_date_time(read_time_str)
 
             # Figure out which bin to use
@@ -266,7 +271,6 @@ def read_dat_file_time(dat_file_path):
             while read_time > time_range[current_bin] + time_step_td \
             and current_bin + 1 < len(time_range):
                 current_bin += 1
-            print(f"read_time: {read_time}, bin lower bound: {time_range[current_bin]}, bin # {current_bin}")
 
             # Get count info
             for i in range(n_targets):
@@ -510,6 +514,8 @@ if __name__ == "__main__":
     parser.add_argument("--Qbin", type=float, help="Bins counts by the ")
     parser.add_argument("--Qhist", type=bool, help="If True, makes a histogram \
         of the average Q scores of the sequences.")
+    parser.add_argument("--Lhist", type=bool, help="If True, makes a histogram \
+        of the average Q scores of the sequences.")
     parser.add_argument("--beep", type=int, help="Plays a sound using beepy when \
         the program finishes running. To pick a sound, provide an integer from \
         1-7. To not play a sound, set to 0. Defaults to 1.")
@@ -616,7 +622,7 @@ if __name__ == "__main__":
 
     # Make length histogram
     if Lhist:
-
+        pass
     else:
         pass
 
@@ -645,8 +651,6 @@ if __name__ == "__main__":
         # Get the time range info
         start_time, end_time, time_step_range, time_range = get_time_range(time_step, run_length, dat_folder)
         time_step_td = dt.timedelta(minutes=time_step)
-        print(f"start time: {start_time}, bin 0 :{time_range[0]}")
-        print(f"end time: {end_time}, last bin :{time_range[-1]}")
 
         # Sum and bin the counts according to average P(corr)
         total_target_sum_array_list, total_targetc_sum_array_list = \

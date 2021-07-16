@@ -1,6 +1,6 @@
-import sys
-sys.path.append('../')
-from simCRN.ml_nupack import gen_complement
+# import sys
+# sys.path.append('../')
+from PertQuant.simCRN.ml_nupack import gen_complement
 import concurrent.futures
 import numpy as np
 import argparse
@@ -519,7 +519,7 @@ def analyze_seq(index):
     global arguments.
 
     Arguments:
-        index (int): The index of the line containing the Q score data.
+        index (int): The index of the line containing the sequence ID data.
 
     Global Arguments;
         lines (list): A list of lines read in from a FASTQ file.
@@ -763,10 +763,6 @@ if __name__ == "__main__":
         containing count analysis settings.")
     parser.add_argument("save_file", type=str, help="The name extension to add to \
         save file names that results are saved to.")
-    parser.add_argument("--Lhist", type=bool, help="If True, makes a histogram \
-        of the sequence lengths. Defaults to False.")
-    parser.add_argument("--bins", type=bool, help="If provided, specifies the \
-        number of bins for the histogram. Defaults to 10.")
     parser.add_argument("--barcoded", type=bool, help="If True, the program will \
         try to identify the barcode ID of each sequence.")
     parser.add_argument("--note", type=str, help="Adds a note to the header file.")
@@ -795,14 +791,6 @@ if __name__ == "__main__":
         pf = args.pf 
     else:
         pf = False
-    if args.Lhist:
-        Lhist = args.Lhist
-    else:
-        Lhist = False
-    if args.bins:
-        bins = args.bins
-    else:
-        bins = 10
     if args.beep:
         which_beep = args.beep 
     else:
@@ -826,7 +814,7 @@ if __name__ == "__main__":
         barcoded=False
         barcode_dict={}
 
-    # Find min unique subseqeunce length
+    # Find min unique subsequence length
     if args.barcoded:
         subseq_min, found = find_min_unique_len(target_list, min_unique_len=min_len, barcode_list=barcode_list, record=record)
     else:
@@ -837,9 +825,8 @@ if __name__ == "__main__":
     # If the provided min subsequence length is greater than the minimum 
     # unique subsequence length, use it.
     if subseq_min > min_len:
-        print("")
         min_len = subseq_min
-        print(f"Using found minimum subsequence length: {subseq_min}")
+        print(f"Provided min subsequence is non unique. Using found minimum subsequence length: {subseq_min}")
     else:
         print(f"Using default or provided minimum subsequence length: {min_len}")
 
@@ -885,15 +872,9 @@ if __name__ == "__main__":
                 seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
                 target_count_list, targetc_count_list = result
                 # Write the results to the save file
-                # write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, \
-                #     barcode_ID, has_repeat_error, target_count_list, \
-                #     targetc_count_list)
-                # If a sequence length histogram is being made, add the lengths
-                # to a list.
-                if Lhist:
-                    len_list.append(seq_len)
-                else:
-                    pass
+                write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, \
+                    barcode_ID, has_repeat_error, target_count_list, \
+                    targetc_count_list)
         read_file.close()
         save_file.close()
         if prog:
@@ -901,14 +882,6 @@ if __name__ == "__main__":
             print(f"Analyzed {index}/{len(fastq_file_list)} files.")
         else:
             pass
-    if Lhist:
-        plt.hist(len_list,bins=bins)
-        plt.title('Sequence Length Histogram')
-        plt.xlabel('Sequence Length')
-        plt.ylabel('Number of Sequences')
-        plt.savefig(f'{save_folder}/sequence_length_hist_{save_file_name}.png')
-    else:
-        pass
     end = time.perf_counter()
     print("Time elapsed: {} second(s)".format(end-start))
 
