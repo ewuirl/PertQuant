@@ -494,10 +494,10 @@ if __name__ == "__main__":
         matches.")
     parser.add_argument("dat_folder", type=str, help="The path to the folder \
         with the dat files to analyze.")
-    parser.add_argument("count_settings_path", type=str, help="The path to the file \
-        containing count analysis settings.")
     parser.add_argument("save_file", type=str, help="The name extension to add to \
         save file names that results are saved to.")
+    parser.add_argument("--settings", type=str, help="The path to the file \
+        containing count analysis settings.")
     parser.add_argument("--sum", type=bool, help="If True, sums subsequence counts \
         together and saves the sums into ")
     parser.add_argument("--barcoded", type=bool, help="If True, the program will \
@@ -523,8 +523,12 @@ if __name__ == "__main__":
 
     # Parse the arguments
     dat_folder = args.dat_folder
-    count_settings_path = args.count_settings_path
     save_file_name = args.save_file
+
+    if args.settings:
+        count_settings_path = args.settings
+    else:
+        count_settings_path  = f"{dat_folder}/count_settings_{save_file_name}.txt"
 
     if args.sum:
         do_sum = args.sum

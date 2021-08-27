@@ -23,6 +23,7 @@ import nanoplotter
 import pickle
 import sys
 from nanoplot.NanoPlot import make_stats
+import beepy as bp
 
 def hist_main():
     '''
@@ -104,6 +105,7 @@ def hist_main():
         plots = make_hist_plots(datadf, settings, args)
 
         logging.info("Finished!")
+        bp.beep(sound=1)
 
     except Exception as e:
         logging.error(e, exc_info=True)
@@ -150,9 +152,12 @@ def make_hist_plots(datadf, settings, args):
             title=settings["title"],
             figformat=settings["format"])
     )
+    print("Created length plots with outliers")
     logging.info("Created length plots with outliers")
 
     # Make histogram plots without outliers
+    settings['drop_outliers'] = True
+    datadf, settings = filter_and_transform_data(datadf, settings)
     settings["statsfile"].append(
         make_stats(datadf[datadf["length_filter"]], settings,
                    suffix="_post_filtering", tsv_stats=args.tsv_stats)
@@ -168,6 +173,7 @@ def make_hist_plots(datadf, settings, args):
             title=settings["title"],
             figformat=settings["format"])
     )
+    print("Created length plots without outliers")
     logging.info("Created length plots without outliers")
     return plots
 

@@ -72,7 +72,7 @@ if __name__ == "__main__":
     parser.add_argument("save_file", type=str, help="The name extension to add to \
         save file names that results are saved to.")
     parser.add_argument("--time", type=int, help="Bins counts by the \
-        provided time step in minutes. Default is to not bin by time.")
+        provided time step in minutes. Default is to bin by 10 min.")
     parser.add_argument("--run", type=int, help="The length of the sequencing run \
         in hours. Defaults to 24 hours.")
     parser.add_argument("--prog", type=bool, help="If True, prints progress \
@@ -162,6 +162,25 @@ if __name__ == "__main__":
         bp.beep(sound=which_beep)
     else:
         pass
+
+    # Plot the data
+    # Make an array of the time range
+    time_range = np.arange(time_step, run_length*60 + time_step, time_step)
+    # Sum the counts over time
+    reads_array_time = np.zeros(len(time_range))
+    reads_array_time[0] = float(read_counts_arr[0])
+    for i in range(len(read_counts_arr)-1):
+        reads_array_time[i+1] = float(read_counts_arr[i+1])+reads_array_time[i]
+
+    fig, ax = plt.subplots(figsize=(7.5,5))
+    ax.plot(time_range, reads_array_time)
+    ax.set_xlabel("Time (min)")
+    ax.set_ylabel("Total Reads")
+    ax.set_title("Number of Reads over Time")
+    ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+    ax.set_xticks(np.arange(0, run_length*60+180, 180))
+    plt.savefig(f"{save_folder}/{save_file_name}_counts_tstep_{time_step}.png")
+
 
     # # Test decide_time_bin
     # start_time =  dt.datetime(2021,3,10)

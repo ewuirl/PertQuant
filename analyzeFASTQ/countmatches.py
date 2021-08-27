@@ -354,7 +354,7 @@ def find_min_unique_len(target_list, min_unique_len=5, barcode_list=[], \
             identifying the sequences with duplicate subsequences. If False, 
             returns unique.
 
-    Returns:
+    Outputs:
         min_unique_len (int): The minimum length such that subsequences of 
             length min_unique_len of the sequences in the target_list and 
             barcode_list are unique. 
@@ -455,7 +455,6 @@ def get_barcode_ID(sequence, index, lines, barcode_list):
 
 def count_matches_seq(target, targetc, sequence, target_len, max_num_subseqs, \
     array_len, min_len, lines):
-
     """
     count_matches(target, targetc, sequence, target_len, max_num_subseqs, \
     array_len, min_len, lines)
@@ -477,18 +476,18 @@ def count_matches_seq(target, targetc, sequence, target_len, max_num_subseqs, \
         min_len (int): the minimum subsequence length that will be checked
         lines (list): a list of the lines of a FASTQ file
 
-    Output:
+    Outputs:
         count_array (numpy arr): A numpy array containing the subsequence counts
-        of the target sequence in the provided sequence. Starts with smaller 
-        subsequence lengths, and increases to the length of the target sequence.
-        Let the target sequence be indexed starting at 0 from the left. For a 
-        particular subsequence length, the counts are ordered by smallest to 
-        largest starting index of the subsequence. For example, for a target
-        sequence of ACGT, the order of the counts of subsequences of length 2 is 
-        AC, CG, GT.
+            of the target sequence in the provided sequence. Starts with smaller 
+            subsequence lengths, and increases to the length of the target sequence.
+            Let the target sequence be indexed starting at 0 from the left. For a 
+            particular subsequence length, the counts are ordered by smallest to 
+            largest starting index of the subsequence. For example, for a target
+            sequence of ACGT, the order of the counts of subsequences of length 2 is 
+            AC, CG, GT.
         comp_count_array (numpy arr): A numpy array containing the subsequence 
-        counts of the target complementary sequence in the provided sequence. 
-        This array is ordered in a similar manner to count_array.
+            counts of the target complementary sequence in the provided sequence. 
+            This array is ordered in a similar manner to count_array.
     """
     # Make arrays to store 
     count_array = np.zeros(array_len)
@@ -549,13 +548,21 @@ def analyze_seq(index):
                 repeat sequences for a sequence to be considered to have a 
                 repeat error.
 
-    Output:
-        seq_ID (str):
-        avg_Q_score (float):
-        barcode_ID (int): Returns -1 if 
-        has_repeat_error (int): Returns -1 if
-        target_count_list (list): 
-        target_comp_list (list): 
+    Outputs:
+        seq_ID (str): The Nanopore sequence ID (contains information about the
+            read).
+        avg_Q_score (float): The base-averaged per base Q score for the read.
+        seq_len (int): The length of the sequence.
+        barcode_ID (int): Returns -1 if a barcode ID was not found. Returns the
+            barcode ID if it was found. Defaults to -1 if the barcode dict
+            is empty.
+        has_repeat_error (int): If handle_repeat_error is False, returns -1. If
+            handle_repeat_error is True, returns 1 if a repeat error was found, 
+            0 if not.
+        target_count_list (list): A list containing the subsequence count arrays
+            for all of the targets. 
+        target_comp_list (list): A list containing the subsequence count arrays 
+            for all of the target complements. 
     """
     global lines 
     global min_len
@@ -619,10 +626,27 @@ def analyze_seq(index):
         targetc_count_list.append(comp_count_array)
     return(seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, target_count_list, targetc_count_list)
 
-def make_save_folder(fastq_folder, save_path="counts"):
+def make_save_folder(fastq_folder, save_path="default"):
+    """
+    make_save_folder(fastq_folder, save_path="default")
 
-    if save_path == "counts":
-        save_folder = f"{fastq_folder}/{save_path}"
+    This function creates a save folder to save the count matches dat files. It 
+    takes in a fastq_folder path and a save path. It uses the save path as the
+    path of the folder to make. The default save path is to create a "counts" 
+    folder in the fastq folder. If the save folder already exists, this function
+    will not overwrite it.
+
+    Arguments:
+        fastq_folder (str): The path to the folder with fastq files to analyze.
+        save_path (str): The path to the desired save folder. Defaults to 
+            "counts", which then makes the save folder "counts" inside the fastq
+            folder.
+
+    Output:
+        save_folder (str): The path to the save folder.
+    """
+    if save_path == "default":
+        save_folder = f"{fastq_folder}/counts"
     else:
         save_folder = save_path
 
@@ -632,9 +656,41 @@ def make_save_folder(fastq_folder, save_path="counts"):
     return save_folder
 
 def write_header_file(save_folder, save_file_name, target_dict, \
-    handle_repeat_error, barcode_dict={}, min_len=5, repeat_list=["TG", "ATT"], n_repeat=3, \
-    note=""):
-    
+    handle_repeat_error, barcode_dict={}, min_len=5, repeat_list=["TG", "ATT"], \
+    n_repeat=3, note=""):
+    """
+    write_header_file(save_folder, save_file_name, target_dict, 
+    handle_repeat_error, barcode_dict={}, min_len=5, repeat_list=["TG", "ATT"], 
+    n_repeat=3, note="")
+
+    Creates a header file called "count_settings_{save_file_name}.txt" in the
+    provided save folder. The file contains the settings used while counting 
+    subsequence matches. If a file with the same name already exists, it asks
+    for confirmation (Y/N, Yes/No) to continue. If the user says no, the program
+    will exit.
+
+    Arguments:
+        save_folder (str): The path to the save folder.
+        save_file_name (str): The custom name to add to header file name.
+        target_dict (dict): A dictionary of the target sequences and their IDs.
+        handle_repeat_error (bool): Whether or not repeat errors were handled.
+
+    Optional Arguments:
+        barcode_dict (dict): A dictionary of barcodes and their IDs. Defaults to
+            an empty dictionary.
+        min_len (int): The minimum subsequence length to check counts for. 
+            Defaults to 5.
+        repeat_list (list of strings): The list of repeat sequences to check for
+            if repeat errors are handled. Defaults to ["TG", "ATT"].
+        n_repeat (int): The number of consecutive repeats to flag as a repeat 
+            error. Defaults to 3.
+        note (str): A string representing a note to add to the header file. 
+            Defaults to an empty string.
+
+    Outputs:
+        header_file_name (str): The name of the header file that was written.
+
+    """
     # Check if the header file exists
     header_file_name = f"count_settings_{save_file_name}.txt"
     header_file_path = f"{save_folder}/{header_file_name}"
@@ -697,9 +753,28 @@ def write_header_file(save_folder, save_file_name, target_dict, \
     print(f"Wrote header file: {header_file_name}")
     return header_file_name
 
-def init_save_file(read_file_path, save_folder, save_file_name, \
-    header_file_name):
+def init_save_file(read_file_path, save_folder, save_file_name, header_file_name):
+    """
+    init_save_file(read_file_path, save_folder, save_file_name, header_file_name)
 
+    This function initiates a .dat save file to store match count data in. It 
+    writes the name of the header file containing information about the match 
+    counting analysis into the first line of the file. It returns the save file 
+    object. Each fastq file gets its own save file.
+
+    Arguments:
+        read_file_path (str): the path to the read file that is about to be
+            analyzed
+        save_folder (str): the path to the save folder to save results in
+        save_file_name (str): the custom name provided at the beginning of the 
+            run
+        header_file_name (str): the name of the header file for the match 
+            counting run
+
+    Outputs:
+        save_file (file): the save file that match count data for the read file
+            will be saved to
+    """
     read_file_list = read_file_path.split("/")
     read_file_name = read_file_list[-1].replace(".fastq","")
 
@@ -711,8 +786,28 @@ def init_save_file(read_file_path, save_folder, save_file_name, \
 
     return save_file
 
-def write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, has_repeat_error, \
-    target_count_list, targetc_count_list):
+def write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, \
+    has_repeat_error, target_count_list, targetc_count_list):
+    """
+    write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, 
+    has_repeat_error, target_count_list, targetc_count_list)
+
+    This function writes count match data to a save file. Each fastq file gets 
+    its own save file.
+
+    Arguments:
+        save_file (file):
+        seq_ID (int):
+        seq_len (int):
+        avg_Q_score (float):
+        barcode_ID (int):
+        has_repeat_error (int):
+        target_count_list (list):
+        targetc_count_list (list):
+    
+    Output:
+        None. Writes data to a save file.
+    """
     save_file.write(f"{seq_ID}\n")
     save_file.write(f"{avg_Q_score} {seq_len} {barcode_ID} {has_repeat_error}\n")
     for i in range(len(target_count_list)):
@@ -759,10 +854,10 @@ if __name__ == "__main__":
         perfect sequence matches of different lengths")
     parser.add_argument("fastq_folder", type=str, help="The path to the folder \
         with the fastq files to analyze.")
-    parser.add_argument("settings_path", type=str, help="The path to the file \
-        containing count analysis settings.")
     parser.add_argument("save_file", type=str, help="The name extension to add to \
         save file names that results are saved to.")
+    parser.add_argument("--settings", type=str, help="The path to the file \
+        containing count analysis settings.")
     parser.add_argument("--barcoded", type=bool, help="If True, the program will \
         try to identify the barcode ID of each sequence.")
     parser.add_argument("--note", type=str, help="Adds a note to the header file.")
@@ -777,8 +872,29 @@ if __name__ == "__main__":
 
     # Parse the arguments
     fastq_folder = args.fastq_folder
-    settings_path = args.settings_path
     save_file_name = args.save_file
+    if args.settings:
+        settings_path = args.settings
+    else:
+        settings_path_search = Path(f"{fastq_folder}/counts").glob("*_settings.txt")
+        settings_path_list = [str(path) for path in settings_path_search]
+        # If there are no default settings files 
+        if len(settings_path_list) == 0:
+            settings_path = str(input(f"No settings file found in counts folder. Please enter the path to the settings file.\n"))
+        # If there is 1 default settings file
+        elif len(settings_path_list) == 1:
+            settings_path = settings_path_list[0]
+        # If there are multiple settings files.
+        else:
+            for i in range(len(settings_path_list)):
+                print("-1: Not listed")
+                print(f"{i}: {settings_path_list[i]}")
+            settings_path_index = str(input(f"Multiple settings file found in counts folder. Please enter the number of the desired settings file.\n"))
+            if settings_path_index == -1:
+                settings_path = str(input(f"Please enter the path to the settings file.\n"))
+            else:
+                settings_path = settings_path_list[settings_path_index]
+
     if args.note:
         note = args.note
     else:
@@ -840,7 +956,7 @@ if __name__ == "__main__":
 
     # Create list of fastq files to analyze
     if pf:
-        fastq_pass_files = Path(f"{fastq_folder}/fastq_pass").glob("*.fastq")
+        fastq_pass_files = Path(f"{fastq_folder}/fastq_pass").glob("*.fastq") 
         fastq_pass_file_list = [str(file) for file in fastq_pass_files]
         fastq_fail_files = Path(f"{fastq_folder}/fastq_fail").glob("*.fastq")
         fastq_fail_file_list = [str(file) for file in fastq_fail_files]

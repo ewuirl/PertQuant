@@ -12,9 +12,9 @@ def check_min_unique_len(seq_list, seq_len, min_len):
     target, and the index where the subsequence starts in the sequence.
 
     Arguments:
-        seq_list (list): 
-        seq_len (int): 
-        min_len (int): 
+        seq_list (list): A list of target sequences and their complements. 
+        seq_len (int): The length of the target sequences
+        min_len (int): The minimum subsequence length to check for
 
     Returns:
         Nothing. Prints statements if nonunique subsequences are found.
@@ -38,6 +38,21 @@ def check_min_unique_len(seq_list, seq_len, min_len):
                             pass
 
 def read_counts(file_name, array):
+    """
+    read_counts(file_name, array)
+
+    This function takes in the name of a subsequence count file (txt file) and 
+    reads in the subsequence counts into an array of the appropriate size. All
+    of the subsequence counts are stored on the same line.
+
+    Arguments:
+        file_name (str): A string representing the path to the subsequence count
+            file to read in.
+        array (arr): An array to store the subsequence counts in.
+
+    Returns:
+        Nothing. Fills in the provided array.
+    """
     with open(file_name, "r") as file:
         index = 0
         while True:
@@ -51,6 +66,21 @@ def read_counts(file_name, array):
                 index += 1
 
 def read_binned_counts(count_file_path, array):
+    """
+    read_binned_counts(count_file_path, array)
+
+    This function takes in the name of a binned subsequence count file (txt file)
+    and reads in the subsequence counts into an array of the appropriate size.
+
+    Arguments:
+        count_file_path (str): A string representing the path to the subsequence
+            count file to read in. Each line in the txt file represented the
+            counts for a particular bin.
+        array (arr): An array to store the subsequence counts in.
+
+    Returns:
+        Nothing. Fills in the provided array.
+    """
     with open(count_file_path, 'r') as file:
         index = 0
         while True:
@@ -63,14 +93,64 @@ def read_binned_counts(count_file_path, array):
             index += 1
 
 def power_func(x, S, p):
+    """
+    power_func(x, S, p)
+
+    This function is used to fit the expected number of a particular subsequence
+    of length x based on the true total number of strands of the entire sequence
+    and the probability of calling a base correctly.
+
+    Arguments:
+        x (int): The subsequence length
+        S (float): The true total number strands of the entire sequence.
+        p (float): The probability of calling a base correctly.
+
+    Returns:
+        E[# of x] (float): The expected number of instances of a particular
+            subsequence of length x.
+    """
     return S*p ** x
 
 # def summed_power_func(x, S, p):
+#     """
+#     summed_power_func(x, S, p)(x, S, p)
+
+#     This function is used to fit the expected number of subsequences of length x
+#     based on the true total number of strands of the entire sequence and the 
+#     probability of calling a base correctly. 
+
+#     This function is commented out 
+#     because it relies on a global argument, which does not work well when 
+#     imported.
+
+#     Arguments:
+#         x (int): The subsequence length
+#         S (float): The true total number strands of the entire sequence.
+#         p (float): The probability of calling a base correctly.
+
+#     Global Arguments:    
+#     seq_len (int): The length of the sequence.
+
+#     Returns:
+#         E[# of x] (float): The expected number of instances of subsequences of
+#             length x.
+#     """
 #     global seq_len
 #     return S*(seq_len+1-x)*p ** x
 
-def autolabel(ax, rects, label_height,label_style='sci'):
-    """Attach a text label above each bar in *rects*, displaying its height."""
+def autolabel(ax, rects, label_height, label_style='sci'):
+    """
+    autolabel(ax, rects, label_height,label_style='sci')
+
+    This function attaches a text label above each bar in *rects*, displaying 
+    its height.
+
+    Arguments:
+        ax (matplotlib ax): 
+        rects (barplot rect): 
+        label_height (int):
+        label_style (str): Defaults to 'sci'
+    """
     for rect in rects:
         height = rect.get_height()
         if label_style == 'sci':
@@ -87,6 +167,23 @@ def autolabel(ax, rects, label_height,label_style='sci'):
                         ha='center', va='bottom')
 
 def calc_sum(count_array, sum_array, seq_len, min_len):
+    """
+    calc_sum(count_array, sum_array, seq_len, min_len)
+
+    This function takes in a count array (not binned), sums the subsequence
+    counts by subsequence length, and then saves these summed counts into a 
+    provided sum array.
+
+    Arguments:
+        count_array (arr): An array with subsequence counts.
+        sum_array (arr): An array to store the summed subsequence counts in.
+        seq_len (int): The target sequence length.
+        min_len (int): The minimum subsequence length.
+
+    Returns:
+        Nothing. Stores the summed subsequence counts in the provided sum_array.
+
+    """
     index = 0
     for i in range(seq_len - min_len + 1):
         for j in range(seq_len - min_len - i + 1):
@@ -94,6 +191,25 @@ def calc_sum(count_array, sum_array, seq_len, min_len):
             index += 1
 
 def read_time_filt_count_files(folder_path, passfail, time_step, run_length, barcode_ID):
+    """
+    read_time_filt_count_files(folder_path, passfail, time_step, run_length, barcode_ID)
+
+    Deprecated.
+    This function reads in time filtered count files.
+
+    Arguments:
+        folder_path (str): A path to folder containing fastq pass/fail folders.
+        passfail (str): "pass" or "fail", depending on whether time filtered
+            pass or fail counts are being read.
+        time_step (int): The time step in minutes that counts were filtered with.
+        run_length (int): The run length in hours.
+        barcode_ID (int): The ID number of the target sequence.
+
+    Returns:
+        count_list (list): a list of subsequence count arrays binned by time step
+        comp_count_list (list): a list of complementary subsequence count arrays
+            binned by time step
+    """
     name_base = f"{folder_path}/fastq_{passfail}/fastq_{passfail}"
     time_step_range = range(time_step, run_length*60+time_step, time_step)
     # Create lists to store count arrays in
@@ -114,6 +230,23 @@ def read_time_filt_count_files(folder_path, passfail, time_step, run_length, bar
     return(count_list, comp_count_list)
 
 def sum_list(array_list, seq_len, min_len):
+    """
+    sum_list(array_list, seq_len, min_len)
+
+    Deprecated.
+    This function takes a list of binned subsequence arrays, the sequence length,
+    and the minimum subsequence length. It sums the counts of each binned array 
+    by subsequence length and returns a list of binned, summed arrays.
+    
+    Arguments:
+        array_list (list): a list of binned subsequence count arrays
+        seq_len (int): The target sequence length.
+        min_len (int): The minimum subsequence length.
+
+    Returns:
+        summed_list (list): A list of binned arrays where counts with the same
+            subsequence length are summed together.
+    """
     summed_list = []
     for i in array_list:
         sum_array = np.zeros(seq_len-min_len+1)
@@ -122,6 +255,22 @@ def sum_list(array_list, seq_len, min_len):
     return(summed_list)
 
 def time_summed_list(sum_list, seq_len, min_len):
+    """
+    time_summed_list(sum_list, seq_len, min_len)
+
+    Deprecated.
+    This function uses a list of time binned, summed arrays and sums them over
+    time to create a list of arrays of the total subsequence counts over time.
+    
+    Arguments:
+        sum_list (list): a list of binned, summed subsequence count arrays
+        seq_len (int): The target sequence length.
+        min_len (int): The minimum subsequence length.
+    
+    Returns:
+        time_summed_list (list): A list of arrays of the counts of different
+            subsequence lengths over time.
+    """
     time_array = sum_list[0]
     time_summed_list = [time_array]
     for i in range(len(sum_list)-1):
@@ -130,12 +279,54 @@ def time_summed_list(sum_list, seq_len, min_len):
     return(time_summed_list)
 
 def fit_func(func, x_fit, array):
+    """
+    fit_func(func, x_fit, array)
+
+    This function takes a function to fit and fits it to the provided data: an 
+    array of input values and an array of output values. Fitting is done with
+    scipy.optimize.curve_fit
+
+    Arguments:
+        func (function): The function to fit.
+        x_fit (arr): An array of input data values, eg subsequence lengths.
+        array (arr): An array of output data values, eg subsequence counts.
+
+    Returns:
+        fit_params (array): An array of the estimated parameter values.
+        fit (array): An array of the fitted function (using the fit parameters 
+            and x_fit as the input data values).
+        pcov (array): The covariance array.
+        perr (array): An array of one standard deviation errors for the parameters.
+    """
     fit_params, pcov = scipy.optimize.curve_fit(func, x_fit, array)
     fit = func(x_fit, *fit_params)
     perr = np.sqrt(np.diag(pcov))
     return(fit_params, fit, pcov, perr)
 
 def sum_fit_func(count_arr, x_fit, seq_len, min_len, func):
+    """
+    sum_fit_func(count_arr, x_fit, seq_len, min_len, func)
+
+    This function takes a function to fit and fits it to the provided data: an 
+    array of input values and an array of output values summed by subsequence
+    length. Fitting is done with scipy.optimize.curve_fit. 
+
+    Arguments:
+        count_arr (arr): An array of output data values, eg subsequence counts.
+            NOT summed.
+        x_fit (arr): An array of input data values, eg subsequence lengths.
+        seq_len (int): The target sequence length.
+        min_len (int): The minimum subsequence length.
+        func (function): The function to fit, aka summed_power_func.
+
+    Returns:
+        summed_counts_arr: The subsequence counts summed by subsequence length.
+        fit_params (array): An array of the estimated parameter values.
+        fit (array): An array of the fitted function (using the fit parameters 
+            and x_fit as the input data values).
+        pcov (array): The covariance array.
+        perr (array): An array of one standard deviation errors for the parameters.
+    """
     # Create an array to store the summed values in 
     summed_counts_arr = np.zeros(seq_len-min_len+1)
     # Sum the counts
@@ -145,35 +336,36 @@ def sum_fit_func(count_arr, x_fit, seq_len, min_len, func):
         summed_counts_arr)
     return (summed_counts_arr, fit_params, fit, pcov, perr)
 
-def sum_fit_arr(target_bin_array, x_fit, seq_len, min_len, bin_range, func):
-    # Create lists to store data in
-    bin_list = []
-    summed_counts_list = []
-    params_list = []
-    fit_list = []
-    pcov_list = []
-    perr_list = []
-    for i in range(len(target_bin_array)):
-        count_arr = target_bin_array[i,:]
-        # Check to see if counts for the bin are nonzero
-        if np.sum(count_arr) > 0:
-            # Fit the subsequence counts
-            summed_counts_arr, fit_params, fit, pcov, perr = \
-            sum_fit_func(count_arr, x_fit, seq_len, min_len, func)
-            # Save results to lists
-            bin_list.append(bin_range[i])
-            summed_counts_list.append(summed_counts_arr)
-            params_list.append(fit_params)
-            fit_list.append(fit)
-            pcov_list.append(pcov)
-            perr_list.append(perr)
-        # Skip if the subsequence counts are zero
-        else:
-            pass
-    return(bin_list, summed_counts_list, params_list, fit_list, pcov_list, \
-        perr_list)
-
 def time_fit_arr(target_bin_array, x_fit, func, is_sum, seq_len, min_len, array_len):
+    """
+    This function takes an array of time binned subsequence counts. Each row is a 
+    separate bin. It sums the subsequence count data over time and fits this 
+    summed data. If is_sum is True, it also sums the data by subsequence length 
+    and fits the summed data.
+
+    Arguments:
+        target_bin_array (array): An array of time binned subsequence counts. 
+            Each row is a separate bin. 
+        x_fit (arr): An array of input data values, eg subsequence lengths.
+        func (function): The function to fit, eg power_func or summed_power_func.
+        is_sum (bool): If True, sums the data by subsequence length and fits the
+            data using sum_fit_func. If False, fits the data using fit_func.
+        seq_len (int): The target sequence length.
+        min_len (int): The minimum subsequence length.
+        array_len (int): The number of subsequence counts in each bin.
+        func (function): The function to fit, aka summed_power_func.
+
+    Returns:
+        time_summed_counts_arr (arr): An array of the subsequence counts summed
+            over time. Each row is a different time bin.
+        params_arr (arr): A array of the fitted parameters for the 
+            binned data. Each row is a separate bin.
+        fit_list (list): A list of fitted function output arrays calculated 
+            using the fitted parameters
+        pcov_list (list): A list of the covariance arrays.
+        perr_arr (arr): An array of one standard deviation errors for
+            the fitted parameters. Each row is a separate bin.
+    """
     rows = len(target_bin_array)
     # Create lists to store data in
     if is_sum:
@@ -207,7 +399,92 @@ def time_fit_arr(target_bin_array, x_fit, func, is_sum, seq_len, min_len, array_
         
     return(time_summed_counts_arr, params_arr, fit_list, pcov_list, perr_arr)
 
+def sum_target_and_comp(target_params, target_perr, comp_params, comp_perr):
+    """
+    sum_target_and_comp(target_params, target_perr, comp_params, comp_perr)
+
+    This function takes total sequence instance estimates (S) for a target 
+    sequence and its complement and sums them together to get an estimate of the
+    true total number of instances of that target. It also calculates the error 
+    of this estimate using one standard deviation error estimates for the 
+    target and complementary sequence values of S.
+
+    Arguments:
+        target_params (arr): An array of the fitted parameters for the target
+            sequence.
+        target_perr (arr): An array of the one standard deviation error estimates
+            for the target sequence.
+        comp_params (arr): An array of the fitted parameters for the complementary
+            sequence.
+        comp_perr (arr): An array of the one standard deviation error estimates
+            for the complementary sequence.
+
+    Returns:
+        tot_S (float): An estimate the total number of instances of the target 
+            sequence.
+        tot_S_err (float): Estimated error of the total number of instances
+            of the target sequence.
+    """
+    # Add target and complement S together
+    tot_S = target_params[0] + comp_params[0]
+    # Add the errors in quadrature
+    tot_S_err = np.sqrt(target_perr[0] ** 2.0 + comp_perr[0] ** 2.0)
+
+    return (tot_S, tot_S_err)
+
+def divide_counts(dividend_params, dividend_perr, divisor_params, divisor_perr):
+    """
+    divide_counts(dividend_params, dividend_perr, divisor_params, divisor_perr)
+
+    This function takes in total sequence instance estimates (S) and estimated
+    one standard deviation errors for two sequences and computes the ratio of S
+    for these sequences, and the ratio error.
+
+    Arguments:
+        dividend_params (float): The dividend value of S, the estimated total 
+            instances of a sequence.
+        dividend_perr (float):The estimated one standard deviation error of the 
+            dividend value of S.
+        divisor_params (float):The divisor value of S, the estimated total 
+            instances of a sequence.
+        divisor_perr (float):The estimated one standard deviation error of the 
+            divisor value of S.
+    Returns:
+        ratio (float): The calculated ratio of the provided values of S.
+        ratio_err (float): The estimated ratio error.
+    """    
+    ratio = dividend_params/divisor_params
+    ratio_err = ratio*np.sqrt((dividend_perr/dividend_params) ** 2.0 \
+        + (divisor_perr/divisor_params) ** 2.0)
+    return (ratio, ratio_err)
+
 def sum_binned_target_and_comp(target_params, target_perr, comp_params, comp_perr):
+    """
+    sum_binned_target_and_comp(target_params, target_perr, comp_params, comp_perr)
+
+    This function takes in binned arrays of total sequence instance estimates (S)
+    for a target sequence and its complement and sums them together to get an 
+    estimate of the true total number of instances of that target. It also 
+    calculates the error of this estimate using one standard deviation error 
+    estimates for the target and complementary sequence values of S. Each row
+    represents a separate bin.
+
+    Arguments:
+        target_params (arr): An array of the fitted parameters for the target
+            sequence. Each row is a separate bin.
+        target_perr (arr): An array of the one standard deviation error estimates
+            for the target sequence. Each row is a separate bin.
+        comp_params (arr): An array of the fitted parameters for the complementary
+            sequence. Each row is a separate bin.
+        comp_perr (arr): An array of the one standard deviation error estimates
+            for the complementary sequence. Each row is a separate bin.
+
+    Returns:
+        tot_S_arr (arr): An array of the binned estimates of the total number of
+            instances of the target sequence.
+        tot_S_err_arr (arr): An array of the estimated errors of the total number
+            of instances of the target sequence.
+    """
     # Create arrays to store data in 
     tot_S_arr = np.zeros(len(target_params))
     tot_S_err_arr = np.zeros(len(target_params))
@@ -219,38 +496,27 @@ def sum_binned_target_and_comp(target_params, target_perr, comp_params, comp_per
     return (tot_S_arr, tot_S_err_arr)
 
 def divide_binned_counts(dividend_params, dividend_perr, divisor_params, divisor_perr):
-    # Create arrays to store data in 
-    ratio_arr = np.zeros(len(dividend_params))
-    ratio_err_arr = np.zeros(len(dividend_params))
+    """
+    divide_binned_counts(dividend_params, dividend_perr, divisor_params, divisor_perr)
 
-    for i in range(len(dividend_params)):
-        ratio_arr[i] = dividend_params[i]/divisor_params[i]
-        ratio_err_arr[i] = ratio_arr[i]*np.sqrt((dividend_perr[i]/dividend_params[i]) ** 2.0 \
-            + (divisor_perr[i]/divisor_params[i]) ** 2.0)
+    This function takes in total sequence instance estimates (S) and estimated
+    one standard deviation errors for two sequences and computes the ratio of S
+    for these sequences, and the ratio error.
 
-    return (ratio_arr, ratio_err_arr)
-
-def fit_array_list(func, x_fit, array_list):
-    fit_list = []
-    val_arr = np.zeros((len(array_list),4))
-    for i in range(len(array_list)):
-        fit_params, fit, perr = fit_func(func, x_fit, array_list[i])
-        fit_list.append(fit)
-        val_arr[i,:] = [fit_params[0], fit_params[1], perr[0], perr[1]]
-    return(fit_list, val_arr)
-
-def sum_binned_target_and_comp(target_params, target_perr, comp_params, comp_perr):
-    # Create arrays to store data in 
-    tot_S_arr = np.zeros(len(target_params))
-    tot_S_err_arr = np.zeros(len(target_params))
-
-    for i in range(len(target_params)):
-        tot_S_arr[i] = target_params[i,0] + comp_params[i,0]
-        tot_S_err_arr[i] = np.sqrt(target_perr[i,0] ** 2.0 + comp_perr[i,0] ** 2.0)
-
-    return (tot_S_arr, tot_S_err_arr)
-
-def divide_binned_counts(dividend_params, dividend_perr, divisor_params, divisor_perr):
+    Arguments:
+        dividend_params (arr): An array of the fitted parameters for the 
+            dividend sequence.
+        dividend_perr (arr): An array of the one standard deviation error 
+            estimates for the dividend sequence.
+        divisor_params (arr):An array of the fitted parameters for the divisor 
+            sequence.
+        divisor_perr (arr):An array of the one standard deviation error estimates
+            for the divisor sequence.
+    Returns:
+        ratio_arr (arr): An array containing the calculated ratio(s) of the 
+            provided values of S.
+        ratio_err_arr (arr): An array containing the estimated ratio error(s).
+    """
     # Create arrays to store data in 
     ratio_arr = np.zeros(len(dividend_params))
     ratio_err_arr = np.zeros(len(dividend_params))
@@ -261,93 +527,81 @@ def divide_binned_counts(dividend_params, dividend_perr, divisor_params, divisor
             + (divisor_perr[i]/divisor_params[i]) ** 2.0)
     return (ratio_arr, ratio_err_arr)
 
-def sum_val_arr(val_arr1, val_arr2, summed=False):
-    summed_val_arr = np.zeros((len(val_arr1), 3))
-    for i in range(len(val_arr1)):
-        summed_val_arr[i,0] = val_arr1[i,0] + val_arr2[i,0]
-        if summed:
-            summed_val_arr[i,1:] = np.sqrt(val_arr1[i,1:] ** 2.0 + val_arr2[i,1:] ** 2.0)
+def plot_time_binned_fits(target, comp, bin_arr, x_range, time_summed_counts_arr, params_arr, \
+    fit_list, perr_arr, bin_step, save_folder, sum=True, y_lims=(0,0), is_save=True):
+    """
+    plot_time_binned_fits(target, comp, bin_arr, x_range, time_summed_counts_arr, params_arr, \
+    fit_list, perr_arr, bin_step, save_folder, sum=True, y_lims=(0,0), is_save=True)
+
+    This function plots the time binned count data together with the fitted function.
+    Each time bin gets its own plot, and if is_save is True, plots are saved in 
+    the specified save folder as png's. If sum is True, the names of the saved 
+    files include "sum" in them. This function will overwrite saved plot files 
+    if files with the same name already exist.
+
+    Arguments:
+        target (str): Name of the target, eg "Target A" or "Target A Complement". 
+            This is used in the title of the plots.
+        comp (bool): The markers of the scatter plot of the count data 
+            are plotted in black if True, and green if False
+        bin_arr (arr): The range of bin values. This should range from 0 to end
+            run time. 
+        x_range (arr): The input x array, eg x_array (not summed) or x_fit (for
+            summed data).
+        time_summed_counts_arr (arr): An array of the subsequence counts summed
+            over time. Each row is a different time bin.
+        params_arr (arr): A array of the fitted parameters for the 
+            binned data. Each row is a separate bin.
+        fit_list (list): A list of fitted function output arrays calculated 
+            using the fitted parameters
+        perr_arr (arr): An array of one standard deviation errors for
+            the fitted parameters. Each row is a separate bin.
+        bin_step (num): The time bin step size.
+        save_folder (str): The path to the folder to save the plots in.
+
+    Optional Arguments:
+        sum (bool): If True, and is_save is True, edits the plot save file
+            names to include "sum".
+        y_lims (tuple): A tuple of the y axis limits (bottom, top). Defaults to
+            (0,0), which sets the minimum y axis value to 0.
+        is_save (bool): If True, saves the plots. Defaults to True.
+
+    Returns:
+        Nothing. Plots of the time binned count data and the fitted functions
+        are made and optionally saved.
+
+    """
+    bin_type = "tstep"
+    for i in range(len(bin_arr)):
+        bin_lower_bound = bin_arr[i]
+        bin_upper_bound = bin_lower_bound + bin_step
+        fig, ax = plt.subplots()
+        if comp:
+            scatter_color = "k"
         else:
-            summed_val_arr[i,1:] = np.sqrt(val_arr1[i,2:] ** 2.0 + val_arr2[i,2:] ** 2.0)
-    return(summed_val_arr)
-
-def ratio_val_arr(val_arr1, val_arr2, summed=False):
-    ratio_arr = np.zeros((len(val_arr1), 2))
-    for i in range(len(val_arr1)):
-        ratio_arr[i,0] = val_arr1[i,0]/val_arr2[i,0]
-        if summed:
-            ratio_arr[i,1] = ratio_arr[i,0] * np.sqrt((val_arr1[i,1]/val_arr1[i,0])** 2.0 + \
-                (val_arr2[i,1]/val_arr2[i,0])** 2.0 )
+            scatter_color = "g"
+        ax.scatter(x_range, time_summed_counts_arr[i,:], marker='.', color=scatter_color)
+        ax.plot(x_range, fit_list[i], label ="fit: S = {:.0f} $\pm$ {:.0f},\np = {:.2f} $\pm$ {:.1e}".\
+        format(params_arr[i,0], perr_arr[i,0], params_arr[i,1], perr_arr[i,1]))
+        ax.set_xticks(np.arange(min(x_fit), max(x_fit)+1, 5.0))
+        ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+        if y_lims != (0,0):
+            ax.set_ylim(y_lims)
         else:
-            ratio_arr[i,1] = ratio_arr[i,0] * np.sqrt((val_arr1[i,2]/val_arr1[i,0])** 2.0 + \
-                (val_arr2[i,2]/val_arr2[i,0])** 2.0 )
-    return(ratio_arr)
-
-# def plot_binned_fits(target, comp, bin_list, x_range, summed_counts_list, params_list, \
-#     fit_list, perr_list, bin_arr, bin_step, bin_type, save_folder, sum=True, y_lims=(0,0), is_save=True):
-#     for i in range(len(bin_list)):
-#         bin_lower_bound = bin_list[i]
-#         bin_upper_bound = bin_lower_bound + bin_step
-#         fig, ax = plt.subplots()
-#         if comp:
-#             scatter_color = "k"
-#         else:
-#             scatter_color = "g"
-#         ax.scatter(x_range, summed_counts_list[i], marker='.', color=scatter_color)
-#         ax.plot(x_range, fit_list[i], label ="fit: S = {:.0f} $\pm$ {:.0f},\np = {:.2f} $\pm$ {:.1e}".\
-#         format(params_list[i][0], perr_list[i][0], params_list[i][1], perr_list[i][1]))
-#         ax.set_xticks(np.arange(min(x_fit), max(x_fit)+1, 5.0))
-#         ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
-#         if y_lims != (0,0):
-#             ax.set_ylim(y_lims)
-#         else:
-#             pass
-#         ax.legend(loc='best')
-#         fig.suptitle(f'Fit of {target} Subsequence Counts, {bin_type} in [{bin_lower_bound:.2f},{bin_upper_bound:.2f}]')
-#         ax.set_xlabel('Length of Subsequence')
-#         ax.set_ylabel('Number of Matches')
-#         if is_save:
-#             if sum:
-#                 png_save_name = f"{save_folder}/{target}_sum_fit_{bin_type}-{bin_lower_bound:.2f}".replace(".","-")
-#             else:
-#                 png_save_name = f"{save_folder}/{target}_fit_{bin_type}-{bin_lower_bound:.2f}".replace(".","-")
-#             plt.savefig(png_save_name + ".png")
-#         else:
-#             pass
-
-
-# def plot_time_binned_fits(target, comp, bin_list, x_range, time_summed_counts_arr, params_arr, \
-#     fit_list, perr_arr, bin_arr, bin_step, bin_type, save_folder, sum=True, y_lims=(0,0), is_save=True):
-#     for i in range(len(bin_list)):
-#         bin_lower_bound = bin_list[i]
-#         bin_upper_bound = bin_lower_bound + bin_step
-#         fig, ax = plt.subplots()
-#         if comp:
-#             scatter_color = "k"
-#         else:
-#             scatter_color = "g"
-#         ax.scatter(x_range, time_summed_counts_arr[i,:], marker='.', color=scatter_color)
-#         ax.plot(x_range, fit_list[i], label ="fit: S = {:.0f} $\pm$ {:.0f},\np = {:.2f} $\pm$ {:.1e}".\
-#         format(params_arr[i,0], perr_arr[i,0], params_arr[i,1], perr_arr[i,1]))
-#         ax.set_xticks(np.arange(min(x_fit), max(x_fit)+1, 5.0))
-#         ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
-#         if y_lims != (0,0):
-#             ax.set_ylim(y_lims)
-#         else:
-#             pass
-#         ax.legend(loc='best')
-#         fig.suptitle(f'Fit of {target} Subsequence Counts, {bin_type} in [{bin_lower_bound:.0f},{bin_upper_bound:.0f}]')
-#         ax.set_xlabel('Length of Subsequence')
-#         ax.set_ylabel('Number of Matches')
-#         if is_save:
-#             if sum:
-#                 png_save_name = f"{save_folder}/{target}_sum_fit_{bin_type}-{bin_upper_bound:.0f}".replace(".","-")
-#             else:
-#                 png_save_name = f"{save_folder}/{target}_fit_{bin_type}-{bin_upper_bound:.0f}".replace(".","-")
-#             plt.savefig(png_save_name + ".png")
-#             plt.close()
-#         else:
-#             pass
+            pass
+        ax.legend(loc='best')
+        fig.suptitle(f'Fit of {target} Subsequence Counts, {bin_type} in [{bin_lower_bound:.0f},{bin_upper_bound:.0f}]')
+        ax.set_xlabel('Length of Subsequence')
+        ax.set_ylabel('Number of Matches')
+        if is_save:
+            if sum:
+                png_save_name = f"{save_folder}/{target}_sum_fit_{bin_type}-{bin_upper_bound:.0f}".replace(".","-")
+            else:
+                png_save_name = f"{save_folder}/{target}_fit_{bin_type}-{bin_upper_bound:.0f}".replace(".","-")
+            plt.savefig(png_save_name + ".png", bbox_inches="tight")
+            plt.close()
+        else:
+            pass
 
 def get_subsequence_counts(N, n, min_len, count_arr):
     """
@@ -363,8 +617,8 @@ def get_subsequence_counts(N, n, min_len, count_arr):
     (eg 0, 1, ...).
 
     Arguments:
-        N (int): 
-        n (int): the size of the "target subsequences".
+        N (int): The length of the full sequence.
+        n (int): The length of the "target subsequences".
         min_len (int): the minimum subsequence length of the target that was 
             counted.
         count_arr (array): An array of subsequence counts for the target of 
@@ -374,7 +628,9 @@ def get_subsequence_counts(N, n, min_len, count_arr):
             start of the subsequence in the target sequence (eg 0, 1, ...).
 
     Returns:
-
+        subseq_counts_array (arr): An array of subsubsequence counts for all the
+            different "target subsequences" of length n. Each row represents 
+            the counts for a particular "target subsequence". 
     """
     # assert (n<N), "The length of the target subsequences must be smaller than the target sequence length."
     assert (n>=min_len), "The length of the target subsequences must be greater than the minimum subsequence length."
@@ -407,6 +663,36 @@ def get_subsequence_counts(N, n, min_len, count_arr):
     return(subseq_counts_array)
 
 def bin_fit_arr(target_bin_array, x_fit, func, is_sum, seq_len, min_len):
+    """
+    bin_fit_arr(target_bin_array, x_fit, func, is_sum, seq_len, min_len)
+
+    This function takes an array of binned subsequence counts and an array of
+    input values and fits the provided function to this binned data. If is_sum
+    is True, it sums the data by subsequence length and fits the summed data. 
+
+    Arguments:
+        target_bin_array (array): An array of binned subsequence counts. 
+            Each row is a separate bin. 
+        x_fit (arr): An array of input data values, eg subsequence lengths.
+        func (function): The function to fit, eg power_func or summed_power_func.
+        is_sum (bool): If True, sums the data by subsequence length and fits the
+            data using sum_fit_func. If False, fits the data using fit_func.
+        seq_len (int): The target sequence length.
+        min_len (int): The minimum subsequence length.
+        func (function): The function to fit, eg power_func or summed_power_func.
+
+    Returns:
+        all_summed_counts_arr (arr): If is_sum is True, this is an array of the 
+            subsequence counts summed by subsequence length. Each row is a 
+            different time bin. If is_sum is False, this is an empty array.
+        params_arr (arr): A array of the fitted parameters for the 
+            binned data. Each row is a separate bin.
+        fit_list (list): A list of fitted function output arrays calculated 
+            using the fitted parameters
+        pcov_list (list): A list of the covariance arrays.
+        perr_arr (arr): An array of one standard deviation errors for
+            the fitted parameters. Each row is a separate bin.
+    """
     rows = len(target_bin_array)
     # Create lists to store data in
     if is_sum:
@@ -439,6 +725,21 @@ def bin_fit_arr(target_bin_array, x_fit, func, is_sum, seq_len, min_len):
     return(all_summed_counts_arr, params_arr, fit_list, pcov_list, perr_arr)
 
 def make_x_fit_arr(seq_len, min_len):
+    """
+    make_x_fit_arr(seq_len, min_len)
+
+    This function makes input arrays to use for fitting with count data summed by
+    subsequence length, and data not summed in this way.
+
+    Arguments:
+        seq_len (int): The target sequence length.
+        min_len (int): The minimum subsequence length.
+
+    Returns:
+        x_array (arr): An array of input values to use with unsummed count data.
+        x_fit (arr): An array of input values to use with count data summed by
+            subsequence length.
+    """
     # Figure out the maximum nunber of subsequences possible
     max_num_subseqs = seq_len - min_len + 1
     # Calculate the count array length
@@ -454,8 +755,124 @@ def make_x_fit_arr(seq_len, min_len):
     x_fit = np.arange(min_len,seq_len+1)
     return(x_array, x_fit)
 
+def plot_binned_artificial_fits(subseq_len, target, comp, x_range, binned_counts_arr, \
+    params_arr, fit_list, perr_arr, save_folder, sum=True, y_lims=(0,0), is_save=True):
+    """
+    plot_binned_artificial_fits(subseq_len, target, comp, x_range, binned_counts_arr, \
+    params_arr, fit_list, perr_arr, save_folder, sum=True, y_lims=(0,0), is_save=True)
+    
+    This function plots the count data of "target subsequences" of the provided
+    subsequence length, together with the fitted function. Each subsequence gets
+    its own plot, and if is_save is True, plots are saved in the specified save 
+    folder as png's. If sum is True, the names of the saved files include "sum" 
+    in them. This function will overwrite saved plot files if files with the same
+    name already exist.
+
+    Arguments:
+        subseq_len (int): The length of the "target subsequences" being plotted.
+        target (str): Name of the target, eg "Target A" or "Target A Complement". 
+            This is used in the title of the plots.
+        comp (bool): The markers of the scatter plot of the count data 
+            are plotted in black if True, and green if False
+        x_range (arr): The input x array, eg x_array (not summed) or x_fit (for
+            summed data).
+        binned_counts_arr (arr): An array of the subsequence counts for the 
+            "target subsequences". Each row is a different subsequence.
+        params_arr (arr): A array of the fitted parameters for the 
+            binned data. Each row is a separate bin.
+        fit_list (list): A list of fitted function output arrays calculated 
+            using the fitted parameters
+        perr_arr (arr): An array of one standard deviation errors for
+            the fitted parameters. Each row is a separate bin.
+        save_folder (str): The path to the folder to save the plots in.
+
+    Optional Arguments:
+        sum (bool): If True, and is_save is True, edits the plot save file
+            names to include "sum".
+        y_lims (tuple): A tuple of the y axis limits (bottom, top). Defaults to
+            (0,0), which sets the minimum y axis value to 0.
+        is_save (bool): If True, saves the plots. Defaults to True.
+
+    Returns:
+        Nothing. Plots of the target subsequence count data and the fitted functions
+        are made and optionally saved.
+    """
+    for i in range(len(binned_counts_arr)):
+        fig, ax = plt.subplots()
+        if comp:
+            scatter_color = "k"
+        else:
+            scatter_color = "g"
+        ax.scatter(x_range, binned_counts_arr[i,:], marker='.', color=scatter_color)
+        ax.plot(x_range, fit_list[i], label ="fit: S = {:.0f} $\pm$ {:.0f},\np = {:.2f} $\pm$ {:.1e}".\
+        format(params_arr[i,0], perr_arr[i,0], params_arr[i,1], perr_arr[i,1]))
+        ax.set_xticks(np.arange(min(x_fit), 25, 5.0))
+        ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+        if y_lims != (0,0):
+            ax.set_ylim(y_lims)
+        else:
+            pass
+        ax.legend(loc='best')
+        fig.suptitle(f'Fit of Target {target} Len {subseq_len} v{i}')
+        ax.set_xlabel('Length of Subsequence')
+        ax.set_ylabel('Number of Matches')
+#         plt.tight_layout()
+        if is_save:
+            if sum:
+                png_save_name = f"{save_folder}/{target}_len_{subseq_len}_sum_fit_{i}".replace(".","-")
+            else:
+                png_save_name = f"{save_folder}/{target}_len_{subseq_len}_fit_{i}".replace(".","-")
+            plt.savefig(png_save_name + ".png", bbox_inches="tight")
+            plt.close()
+        else:
+            pass
+
 def fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len, N, min_len, \
     fit_save_folder, power_func, summed_power_func, plot=True):
+    """
+    fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len, N, min_len, \
+    fit_save_folder, power_func, summed_power_func, plot=True)
+
+    This function takes start (smallest) and end lengths for "target subsequences",
+    picks out the subsequence count data for these subsequences lengths, fits
+    the provided functions power_func and summed_power_func, and optionally
+    plots the data and fits.
+
+    Arguments:
+        target (str): Name of the target, eg "Target A" or "Target A Complement". 
+            This is used in the title of the plots.
+        comp (bool): The markers of the scatter plot of the count data 
+            are plotted in black if True, and green if False 
+        total_counts_arr (arr): An array of the subsequence counts.
+        start_len (int): The minimum "target subsequence" length to analyze.
+        end_len (int): The maximum "target subsequence" length to analyze.
+        N (int): The length of the sequence.
+        min_len (int): The minimum subsequence length.
+        fit_save_folder (str): The path to the folder to save the plots in.
+        power_func (func): The power function to fit.
+        summed_power_func (func): The summed power function to fit.
+
+    Optional Arguments:
+        plot (bool): If True, saves plots of the "target subsequence" count data
+            and the fitted functions. Defaults to True.
+
+    Returns:
+        all_params_arr (arr): An array containing the power_func fitted 
+            parameters for all of the "target subsequences". Each row represents
+            results for a different "target subsequence".
+        all_perr_arr (arr): An array containing the estimated error for the 
+            power_func fitted parameters for all of the "target subsequences". 
+            Each row represents results for a different "target subsequence".
+        all_params_arr_s (arr): An array containing the summed_power_func fitted 
+            parameters for all of the "target subsequences". Each row represents
+            results for a different "target subsequence".
+        all_perr_arr_s (arr): An array containing the estimated error for the 
+            summed_power_func fitted parameters for all of the "target 
+            subsequences". Each row represents results for a different "target 
+            subsequence".
+    """
+    assert (start_len>=min_len), "The length of the target subsequences must be greater than the minimum subsequence length."
+    assert (N>=end_len), "The length of the target subsequences must be smaller than the total sequence length."
     rows = int(((N-end_len+1)+(N-start_len+1))*(end_len-start_len+1)/2)
     all_params_arr = np.zeros((rows,2))
     all_perr_arr = np.zeros((rows,2))
@@ -483,12 +900,12 @@ def fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len,
         print(f"saved the results of {length}")
         # Save the plots
         if plot:
-            plot_binned_fits(length, target, comp, x_arr, subseq_counts, params_arr, \
-                fit_list, perr_arr, fit_save_folder, sum=False, y_lims=(0,0), \
-                is_save=True)
-            plot_binned_fits(length, target, comp, x_fit, summed_counts_arr_s, params_arr_s, \
-                fit_list_s, perr_arr_s, fit_save_folder, sum=True, y_lims=(0,0), \
-                is_save=True)
+            plot_binned_artificial_fits(length, target, comp, x_arr, subseq_counts, \
+                params_arr, fit_list, perr_arr, fit_save_folder, sum=False, \
+                y_lims=(0,0), is_save=True)
+            plot_binned_artificial_fits(length, target, comp, x_fit, \
+                summed_counts_arr_s, params_arr_s, fit_list_s, perr_arr_s, \
+                fit_save_folder, sum=True, y_lims=(0,0), is_save=True)
         else:
             pass
 
@@ -629,6 +1046,16 @@ def get_box_plot_data(ratio_arr, start_len, end_len, N):
         # Add the array to the list
         box_plot_list.append(len_ratio_arr)
     return(box_plot_list)
+
+
+def read_count_reads(count_read_file_name, time_step, run):
+    time_range = np.arange(time_step,run*60+ time_step,time_step)
+    reads_array = np.zeros(len(time_range))
+    with open(count_read_file_name, 'r') as count_read_file:
+        line = count_read_file.readline().rstrip('\n')
+        read_counts = line.split()
+        
+
 
 
 
