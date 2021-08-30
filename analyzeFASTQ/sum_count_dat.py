@@ -12,6 +12,29 @@ import time
 import beepy as bp
 
 def get_count_settings(count_settings_path):
+    """
+    get_count_settings(count_settings_path)
+
+    This function gets some run information and settings from a count settings 
+    file to use while summing counts.
+
+    Arguments:
+        count_settings_path (str): The path to the file containing run information
+            and count settings. 
+
+    Returns:
+        n_targets (int): The number of target sequences.
+        target_list (list): A list of the target sequences (strings).
+        target_lengths (list): A list of the target lengths (int).
+        n_barcodes (int): The number of barcode sequences.
+        min_len (int): The minimum subsequence length that was counted.
+        handle_repeat_error (bool): If True, handles repeat errors. If False,
+            does not.
+        repeat_list (list): A list of repeat sequences (strings) to check for
+            when handling repeat errors.
+        n_repeat (int): The minimum number of sequential repeats to count as
+            a repeat error.
+    """
     # Open the settings file to find the target file path
     with open(count_settings_path, 'r') as settings_file:
         lines = settings_file.readlines()
@@ -58,6 +81,27 @@ def get_count_settings(count_settings_path):
         handle_repeat_error, repeat_list, n_repeat)
 
 def get_seq_info(seq_ID, features):
+    """
+    get_seq_info(seq_ID, features)
+
+    This function obtains read sequence info from the sequence ID and a string
+    of features. It returns the read sequence info.
+
+    Arguments:
+        seq_ID (str): A string containing read sequence information.
+        features (str): A string containing the average Q score, length, barcode
+            ID, and has_repeat_error for a read.
+
+    Returns:
+        read_time_str (str): A string describing the time the sequence was read.
+        avg_Q_score (float): The per-base Q score averaged for all the bases of
+            the read.
+        read_len (int): The length of the read.
+        barcode_ID (int): The barcode ID of the read. This is set to -1 if the
+            run was not barcoded.
+        has_repeat_error (int): Whether or not the read has a repeat error. 1
+            if it does, 0 if it doesn't. -1 if it was not checked.
+    """
     seq_ID_list = seq_ID.split()
     read_time_str = seq_ID_list[4]
     feature_list = features.split()
@@ -68,12 +112,49 @@ def get_seq_info(seq_ID, features):
     return(read_time_str, avg_Q_score, read_len, barcode_ID, has_repeat_error)
 
 def str_2_date_time(read_time_str):
+    """
+    str_2_date_time(read_time_str)
+
+    This function takes a read time string and creates a date time object 
+    containing the information.
+
+    Arguments:
+        read_time_str (str): A string describing the time the sequence was read.
+
+    Returns: 
+        read_time (datetime): A datetime object representing the time the 
+            sequence was read..
+    """
     read_time = dt.datetime(int(read_time_str[11:15]), int(read_time_str[16:18]), \
                 int(read_time_str[19:21]), hour=int(read_time_str[22:24]), \
                 minute=int(read_time_str[25:27]), second=int(read_time_str[28:30]))
     return read_time 
 
-def make_count_save_folder(dat_folder, save_file, time_step, Qbin, Pbin):
+def make_count_save_folder(dat_folder, save_file_name, time_step, Qbin, Pbin):
+    """
+    make_count_save_folder(dat_folder, save_file_name, time_step, Qbin, Pbin)
+
+    This function makes a folder to save the summed count data to in the folder
+    containing the dat files that are being analyzed. save_file_name can be used
+    to provided a custom portion of the folder name. Binning values are used for
+    the automated portion of the folder name.
+
+    Arguments:
+        dat_folder (str): The folder containing the count dat files being
+            analyzed.
+        save_file_name (str): A string to help identify the data. This is used
+            in the names of the save folder and the saved files.
+        time_step (int): An integer representing the time bin in minutes to sum 
+            the data by. Set to 0 if the data will not be binned by time.
+        Qbin (float): A float representing the Q score bin size to sum the data by. 
+            Set to 0 if the data was not binned by Q score.
+        Pbin (float): A float representing the bin size of P, the per-base 
+            probability of calling a base correctly, to sum the data by. Set to 
+            0 if the data was not binned by P.
+
+    Returns:
+        save_folder (str): The path to the save folder.
+    """
     if time_step > 0.0:
         time_step_name = f"_tstep-{time_step}"
     else:
@@ -99,6 +180,23 @@ def make_count_save_folder(dat_folder, save_file, time_step, Qbin, Pbin):
     return save_folder
 
 def get_Q_scores(dat_file_path):
+    """
+    get_Q_scores(dat_file_path)
+
+    This function takes in the path to a dat file of counts and computes the
+    base-averaged Q score for each read sequence, and saves them in an array.
+
+    Arguments:
+        dat_file_path (str): The path to the dat file to get base-averaged Q 
+            scores for.
+
+    Global Arguments:
+        n_targets (int): The number of target sequences in the run.
+
+    Returns:
+        avg_Q_score_arr (arr): An array containing the base-averaged Q scores
+            for each read sequence.
+    """
     global n_targets
 
     with open(dat_file_path, 'r') as dat_file:
@@ -121,6 +219,21 @@ def get_Q_scores(dat_file_path):
         return avg_Q_score_arr
 
 def get_Q_scores_parallel(dat_file_list):
+    """
+    get_Q_scores_parallel(dat_file_list)
+
+    This function takes a list of paths to dat files of counts and computes the
+    base-averaged Q score for the read sequences in the files in parallel. It 
+    saves them all in an array.
+
+    Arguments:
+        dat_file_list (list): A list of paths to dat file of counts to get
+            base-averaged Q scores for.
+
+    Returns:
+        all_Q_score_arr (arr): An array containing the base-averaged Q scores
+            for each read sequence.
+    """
     all_Q_score_arr = np.array([])
     # Parallelize the Q score data collection
     with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -132,12 +245,62 @@ def get_Q_scores_parallel(dat_file_list):
     return all_Q_score_arr
 
 def read_count_line(dat_file):
+    """
+    read_count_line(dat_file)
+
+    This function takes an opened dat file and reads in a line of count data from 
+    the file and saves it in an array.
+
+    Arguments:
+        dat_file (file): An opened dat file of counts.
+
+    Returns:
+        count_arr (arr): An array of a line of counts from the file.
+    """
     count_line = dat_file.readline().rstrip('\n')
     count_line_list = [int(i) for i in count_line.split()]
     count_arr = np.array(count_line_list)
     return count_arr
 
 def read_dat_file_Pbin(dat_file_path):
+    """
+    read_dat_file_Pbin(dat_file_path)
+
+    This function takes a path to a dat file of counts and bins each read's 
+    counts by P, the base-averaged probability of calling a base correctly for
+    each read. It sums the counts in each bin, and returns an array of these
+    summed, binned counts. Each column in the array represents the counts for a
+    different subsequence, and each row represents the counts for a different
+    bin. Each time bin is upper bound inclusive and lower bound exclusive, 
+    except the first and last bins. The first and last bins are both upper and
+    lower bound inclusive.
+
+    Arguments:
+        dat_file_path (str): The path to the dat file to get base-averaged Q 
+            scores for.
+
+    Global Arguments:
+        n_targets (int): The number of target sequences in the run.
+        target_lengths (list): A list of the target lengths (int).
+        n_barcodes (int): The number of barcode sequences.
+        min_len (int): The minimum subsequence length that was counted.
+        barcoded (bool): If True, the read data is barcoded, and will be sorted
+            according to barcode as well. Specified by command-line argument. 
+            Defaults to False.
+        prog (bool): If True, progress statements are printed. Specified by     
+            command-line argument. Defaults to False.
+        Pbin (float): The bin size to separate the reads with. Should be a value
+            between (0,1).
+        P_corr_bins (arr): An array of the lower bounds of the bins.
+
+    Returns:
+        target_sum_array_list (list): A list of arrays of subsequence counts 
+            binned and summed by the base-averaged probability of calling a base
+            correctly. Each target gets its own array. 
+        targetc_sum_array_list (list): A list of arrays of complement subsequence 
+            counts binned and summed by the base-averaged probability of calling
+            a base correctly. Each target gets its own array. 
+    """
     global n_targets
     global target_lengths
     global n_barcodes
@@ -201,6 +364,31 @@ def read_dat_file_Pbin(dat_file_path):
         return(target_sum_array_list, targetc_sum_array_list)
 
 def read_dat_file_bin_parallel(bin_range, bin_func, dat_file_list, target_lengths):
+    """
+    read_dat_file_bin_parallel(bin_range, bin_func, dat_file_list, target_lengths)
+
+    This function takes a list of dat files, and a list of target lengths, and 
+    it parallelizes the summing and binning using the provided bin range and 
+    read binning function of the subsequence counts of the reads in all of the 
+    files. The counts are also summed across files.
+    
+    Arguments:
+        bin_range (arr): An array of the lower bounds of the bins to bin the
+            subsequence counts with.
+        bin_func (func): The function to use to bin the subsequence counts with,
+            such as read_dat_file_Pbin and read_dat_file_time.
+        dat_file_list (list): A list of paths to dat file of subsequence counts 
+            to bin and sum.
+        target_lengths (list): A list of the target lengths (int).
+    
+    Returns:
+        total_target_sum_array_list (list): A list of arrays of subsequence counts 
+            binned and summed and summed using bin_func. Results of each file 
+            are also summed. Each target gets its own array. 
+        total_targetc_sum_array_list (list): A list of arrays of complement 
+            subsequence counts binned and summed using bin_func. Results of each
+            file are also summed. Each target gets its own array. 
+    """
     total_target_sum_array_list = []
     total_targetc_sum_array_list = []
     for i in range(n_targets):
@@ -224,14 +412,89 @@ def read_dat_file_bin_parallel(bin_range, bin_func, dat_file_list, target_length
 
     return (total_target_sum_array_list, total_targetc_sum_array_list)
 
+def decide_time_bin(read_time, start_time, time_delta, range_len):
+    """
+    decide_time_bin(read_time, start_time, time_delta, range_len)
+
+    This function decides what time bin a read's subsequence counts should go 
+    into. Each time bin is upper bound inclusive and lower bound exclusive, 
+    except the first and last bins. To ensure all reads are binned, the first 
+    bin is inclusive of read times equal to or before the start time, and the
+    last bin is inclusive of read times equal to or after the end of the run.
+
+    Arguments:
+        read_time (datetime): A datetime object of the time the sequence was
+            read.
+        start_time (datetime): A datetime object of the start of the sequencing
+            run.
+        time_delta (timedelta): A timedelta object of the timestep of the bins.
+        range_len (int): The number of time bins.
+
+    Returns:
+        time_bin (int): The index of the time bin that the read belongs to.
+    """
+    time_diff = read_time - start_time
+    time_floor = np.floor(time_diff/time_delta)
+    time_mod = time_diff % time_delta
+
+    # Figure out which bin the time goes into
+    if time_mod > dt.timedelta(0):
+        time_bin = int(time_floor)
+    else:
+        time_bin = int(time_floor) - 1
+
+    # Make sure the time bin is in the bin range
+    if time_bin < 0:
+        time_bin = 0
+    elif time_bin >= range_len:
+        time_bin = range_len - 1
+    return(time_bin)
+
 def read_dat_file_time(dat_file_path):
+    """
+    This function takes a path to a dat file of counts and bins each read's 
+    counts by its read time. It sums the counts in each bin, and returns an array
+    of these summed, binned counts. Each column in the array represents the 
+    counts for a different subsequence, and each row represents the counts for a
+    different bin. Each time bin is upper bound inclusive and lower bound 
+    exclusive, except the first and last bins. To ensure all reads are binned, 
+    the first bin is inclusive of read times equal to or before the start time, 
+    and the last bin is inclusive of read times equal to or after the end of the 
+    run.
+
+    Arguments:
+        dat_file_path (str): The path to the dat file to get base-averaged Q 
+            scores for.
+
+    Global Arguments:
+        n_targets (int): The number of target sequences in the run.
+        target_lengths (list): A list of the target lengths (int).
+        n_barcodes (int): The number of barcode sequences.
+        min_len (int): The minimum subsequence length that was counted.
+        barcoded (bool): If True, the read data is barcoded, and will be sorted
+            according to barcode as well. Specified by command-line argument. 
+            Defaults to False.
+        prog (bool): If True, progress statements are printed. Specified by     
+            command-line argument. Defaults to False.
+        start_time (datetime): A datetime object of the start of the sequencing
+            run.
+        time_range_len (int): The number of time bins.
+        time_step_td (timedelta): A timedelta object of the timestep of the bins.
+
+    Returns:
+        target_sum_array_list (list): A list of arrays of subsequence counts 
+            binned and summed by read time. Each target gets its own array. 
+        targetc_sum_array_list (list): A list of arrays of complement subsequence 
+            counts binned and summed by read time. Each target gets its own array. 
+    """
     global n_targets
     global target_lengths
     global n_barcodes
     global min_len
     global barcoded 
     global prog
-    global time_range
+    global start_time
+    global time_range_len
     global time_step_td
 
     with open(dat_file_path, 'r') as dat_file:
@@ -264,13 +527,8 @@ def read_dat_file_time(dat_file_path):
             read_time = str_2_date_time(read_time_str)
 
             # Figure out which bin to use
-            current_bin = 0
-
-            # Check if the next bin up should be used and make sure the last bin
-            # Catches everything greater than the lower bound of the last bin
-            while read_time > time_range[current_bin] + time_step_td \
-            and current_bin + 1 < len(time_range):
-                current_bin += 1
+            current_bin = decide_time_bin(read_time, start_time, time_step_td, \
+                time_range_len)
 
             # Get count info
             for i in range(n_targets):
@@ -288,6 +546,21 @@ def read_dat_file_time(dat_file_path):
         return(target_sum_array_list, targetc_sum_array_list)
 
 def write_summed_counts_array(save_file_path, summed_counts_array):
+    """
+    write_summed_counts_array(save_file_path, summed_counts_array)
+
+    This function writes the data from a summed count array into a file. If the
+    array has more than one row, each row is written on a new line.
+    
+    Arguments:
+        save_file_path (str): The path to the file to save the data to.
+        summed_counts_array (arr): An array containing summed subsequence count
+            data.
+
+    Returns:
+        Nothing. Writes the data in the provided array to the file specified by
+            the path.
+    """
     with open(save_file_path, 'w') as save_file:
         array_dim = summed_counts_array.shape 
         for i in range(array_dim[0]):
@@ -298,6 +571,40 @@ def write_summed_counts_array(save_file_path, summed_counts_array):
 
 def write_summed_counts(save_folder, save_file_name, Pbin, Qbin, time_step, \
     total_target_sum_array_list, total_targetc_sum_array_list, prog):
+    """
+    write_summed_counts(save_folder, save_file_name, Pbin, Qbin, time_step,
+    total_target_sum_array_list, total_targetc_sum_array_list, prog)
+
+    This function writes binned and summed subsequence data to files in 
+    save_folder. File names are customized by save_file_name. Each target and 
+    its complement get separate save files. Each row in the save file consists 
+    of subsequence counts for a different bin, starting from the smallest to 
+    largest bin value. 
+
+    Arguments:
+        save_folder (str): The path to the save folder.
+        save_file_name (str): A string to help identify the data. This is used
+            in the names of the save folder and the saved files.
+        Pbin (float): A float representing the bin size of P, the per-base 
+            probability of calling a base correctly, to sum the data by. Is set 
+            to 0 if the data was not binned by P.
+        Qbin (float): A float representing the Q score bin size to sum the data by. 
+            Is set to 0 if the data was not binned by Q score.
+        time_step (int): An integer representing the time bin in minutes to sum 
+            the data by. Is set to 0 if the data was not binned by time.
+        target_sum_array_list (list): A list of arrays of subsequence counts 
+            binned and summed by P, Q score, or read time. Each target gets its 
+            own array. 
+        targetc_sum_array_list (list): A list of arrays of complement subsequence 
+            counts binned and summed by P, Q score, or read time. Each target 
+            gets its own array. 
+        prog (bool): If True, progress statements are printed. Specified by     
+            command-line argument. Defaults to False.
+    
+    Returns:
+        Nothing. Writes the binned and summed subsequence count data to the files 
+            in the save folder, with names customized by save_file_name.
+    """
     for i in range(len(total_targetc_sum_array_list)):
         # Make the paths for the save files
         if Pbin > 0.0:
@@ -325,6 +632,33 @@ def write_summed_counts(save_folder, save_file_name, Pbin, Qbin, time_step, \
 
 def get_sum_settings(sum_count_folder, has_time_step=False, has_Pbin=False, has_Qbin=False):
     sum_count_list = sum_count_folder.split("_")
+    """
+    get_sum_settings(sum_count_folder, has_time_step=False, has_Pbin=False, has_Qbin=False)
+
+    This function takes in a path to a folder containing binned, summed 
+    subsequence data and uses the optional arguments to determine what the bin 
+    size is.
+
+    Arguments:
+        sum_count_folder (str): The path to the folder containing binned, summed
+            subsequence data.
+        has_time_step (bool): Defaults to False. Set to True if the data was 
+            binned by time.
+        has_Pbin (bool): Defaults to False. Set to True if the data was 
+            binned by P, the base-averaged probability of calling a base 
+            correctly.
+        has_Qbin (bool): Defaults to False. Set to True if the data was 
+            binned by base-averaged Q scores.
+
+    Returns:
+        time_step (int): The time bin size in minutes. Set to 0 if the data was
+            not binned by time.
+        Pbin (float): The P bin size (between 0 and 1). Set to 0 if the data 
+            was not binned by the base-averaged probability of calling a base
+            correctly.
+        Qbin (float): The Q score bin size. Set to 0 if the data was not binned 
+            by the base-averaged Q score.
+    """
     # Set default values
     time_step = 0
     Pbin = 0.0
@@ -378,8 +712,6 @@ def get_time_range(time_step, run_length, sum_count_folder):
         time_step_range (range): a range object with bounds [time_step, run_length (min)]
         time_range (list): a list of timedelta objects corresponding to the 
             values in time_step_range
-        
-
     """
     sum_count_folder_list = sum_count_folder.split("/")
     folder_name = sum_count_folder_list[-2] # change to -2
@@ -400,6 +732,33 @@ def get_time_range(time_step, run_length, sum_count_folder):
     return(start_time, end_time, time_step_range, time_range)
 
 def read_dat_file_all(dat_file_path):
+    """
+    read_dat_file_all(dat_file_path)
+
+    This function reads in all the subsequence counts from a dat file and
+    sums the subsequence counts of each read together.
+
+    Arguments:
+        dat_file_path (str): The path to the dat file to read subsequence
+            count data from.
+    
+    Global Arguments:
+        n_targets (int): The number of target sequences in the run.
+        target_lengths (list): A list of the target lengths (int).
+        n_barcodes (int): The number of barcode sequences.
+        min_len (int): The minimum subsequence length that was counted.
+        barcoded (bool): If True, the read data is barcoded, and will be sorted
+            according to barcode as well. Specified by command-line argument. 
+            Defaults to False.
+        prog (bool): If True, progress statements are printed. Specified by     
+            command-line argument. Defaults to False.
+
+    Returns:
+        target_sum_array_list (list): A list of arrays of summed subsequence 
+            counts. Each target gets its own array. 
+        targetc_sum_array_list (list): A list of arrays of summed complement 
+            subsequence counts. Each target gets its own array. 
+    """
     global n_targets
     global target_lengths
     global n_barcodes
@@ -448,6 +807,25 @@ def read_dat_file_all(dat_file_path):
         return(target_sum_array_list, targetc_sum_array_list)
 
 def read_dat_file_all_parallel(dat_file_list, target_lengths):
+    """
+    read_dat_file_all_parallel(dat_file_list, target_lengths)
+
+    This function takes a list of dat file paths and sums all the subsequence
+    counts together by read and file.
+
+    Arguments:
+        dat_file_list (list): A list of paths to dat file of subsequence counts 
+            to bin and sum.
+        target_lengths (list): A list of the target lengths (int).
+
+    Returns:
+        total_target_sum_array_list (list): A list of arrays of summed subsequence 
+            counts. Results of each file are also summed. Each target gets its 
+            own array. 
+        total_targetc_sum_array_list (list): A list of arrays of summed 
+            complement subsequence counts. Results of each file are also summed. 
+            Each target gets its own array. 
+    """
     total_target_sum_array_list = []
     total_targetc_sum_array_list = []
     for i in range(n_targets):
@@ -470,11 +848,38 @@ def read_dat_file_all_parallel(dat_file_list, target_lengths):
     return (total_target_sum_array_list, total_targetc_sum_array_list)
 
 def write_all_summed_counts_array(save_file_path, summed_counts_array):
+    """
+    write_all_summed_counts_array(save_file_path, summed_counts_array)
+
+    This function writes the data from a summed count array (1D) into a file. 
+    
+    Arguments:
+        save_file_path (str): The path to the file to save the data to.
+        summed_counts_array (arr): A 1D array containing summed subsequence count
+            data.
+
+    Returns:
+        Nothing. Writes the data in the provided array to the file specified by
+            the path.
+    """
     with open(save_file_path, 'w') as save_file:
         for i in range(len(summed_counts_array)):
             save_file.write(f"{summed_counts_array[i]}\t")
 
 def create_time_test_dat_file(bin_range, save_file_name):
+    """
+    create_time_test_dat_file(bin_range, save_file_name)
+
+    This function creates a test dat file to test the time binning function
+    read_dat_file_time with.
+
+    Arguments:
+        bin_range (arr): An array of time bins.
+        save_file_name (str): The name of the test file to make. It should end
+            in .dat
+    Returns:
+        Nothing. Writes a file.
+    """
     with open(save_file_name, "w") as save_file:
         save_file.write("# Data info and analysis settings in count_settings_0-1ratio1-1_0.txt\n")
         for i in range(len(bin_range)):
@@ -498,8 +903,8 @@ if __name__ == "__main__":
         save file names that results are saved to.")
     parser.add_argument("--settings", type=str, help="The path to the file \
         containing count analysis settings.")
-    parser.add_argument("--sum", type=bool, help="If True, sums subsequence counts \
-        together and saves the sums into ")
+    parser.add_argument("--all", type=bool, help="If True, sums all subsequence \
+        counts together.")
     parser.add_argument("--barcoded", type=bool, help="If True, the program will \
         sort results by the barcode.")
     parser.add_argument("--time", type=int, help="Bins counts by the \
@@ -655,6 +1060,7 @@ if __name__ == "__main__":
         # Get the time range info
         start_time, end_time, time_step_range, time_range = get_time_range(time_step, run_length, dat_folder)
         time_step_td = dt.timedelta(minutes=time_step)
+        time_range_len = len(time_range)
 
         # Sum and bin the counts according to average P(corr)
         total_target_sum_array_list, total_targetc_sum_array_list = \
@@ -664,16 +1070,15 @@ if __name__ == "__main__":
         write_summed_counts(save_folder, save_file_name, Pbin, Qbin, time_step, \
             total_target_sum_array_list, total_targetc_sum_array_list, prog)
     else:
+        start = time.perf_counter()
+        total_target_sum_array_list, total_targetc_sum_array_list = read_dat_file_all_parallel(dat_file_list, target_lengths)
+        time_step = 1
+        for i in range(len(total_target_sum_array_list)):
+            save_file_path = f"{dat_folder}/all_target_{i}_counts.txt"
+            write_all_summed_counts_array(save_file_path, total_target_sum_array_list[i])
+            save_file_path = f"{dat_folder}/all_target_comp_{i}_counts.txt"
+            write_all_summed_counts_array(save_file_path, total_targetc_sum_array_list[i])
         pass
-
-    # start = time.perf_counter()
-    # total_target_sum_array_list, total_targetc_sum_array_list = read_dat_file_all_parallel(dat_file_list, target_lengths)
-    # time_step = 1
-    # for i in range(len(total_target_sum_array_list)):
-    #     save_file_path = f"{dat_folder}/all_target_{i}_counts.txt"
-    #     write_all_summed_counts_array(save_file_path, total_target_sum_array_list[i])
-    #     save_file_path = f"{dat_folder}/all_target_comp_{i}_counts.txt"
-    #     write_all_summed_counts_array(save_file_path, total_targetc_sum_array_list[i])
 
     if time_step > 0 or Pbin > 0 or Qbin > 0:
         end = time.perf_counter()

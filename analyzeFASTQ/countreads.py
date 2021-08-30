@@ -10,24 +10,7 @@ import beepy as bp
 from PertQuant.analyzeFASTQ.countmatches import make_save_folder
 from PertQuant.analyzeFASTQ.sum_count_dat import str_2_date_time
 from PertQuant.analyzeFASTQ.sum_count_dat import get_time_range
-
-def decide_time_bin(read_time, start_time, time_delta, range_len):
-    time_diff = read_time - start_time
-    time_floor = np.floor(time_diff/time_delta)
-    time_mod = time_diff % time_delta
-
-    # Figure out which bin the time goes into
-    if time_mod > dt.timedelta(0):
-        time_bin = int(time_floor)
-    else:
-        time_bin = int(time_floor) - 1
-
-    # Make sure the time bin is in the bin range
-    if time_bin < 0:
-        time_bin = 0
-    elif time_bin >= range_len:
-        time_bin = range_len - 1
-    return(time_bin)
+from PertQuant.analyzeFASTQ.sum_count_dat import decide_time_bin
 
 def get_time(index):
     """
@@ -196,8 +179,37 @@ if __name__ == "__main__":
     # test_time_step_range = range(-15,25*60, 15)
     # for i in range(len(test_time_step_range)):
     #     delta_time = dt.timedelta(minutes=test_time_step_range[i])
-    #     test_time_range.append(start_time+delta_time)
+    #     test_time_range.append(start_time+delta_time)        
 
+    # # See which time binning method is faster
+    # start = time.perf_counter()
     # for read_time in test_time_range:
     #     time_bin = decide_time_bin(read_time, start_time, time_step, range_len)
+    #     # print(f"read_time: {read_time}, bin: {time_bin}, bin_lower_bound: {time_range[time_bin]}")
+    # end = time.perf_counter()
+    # print("Time elapsed: {} second(s)".format(end-start))
+
+    # start = time.perf_counter()
+    # for read_time in test_time_range:
+    #     current_bin = 0
+    #     # Check if the next bin up should be used and make sure the last bin
+    #     # Catches everything greater than the lower bound of the last bin
+    #     while read_time > time_range[current_bin] + time_step \
+    #     and current_bin + 1 < len(time_range):
+    #         current_bin += 1
+    #     # print(f"read_time: {read_time}, bin: {current_bin}, bin_lower_bound: {time_range[current_bin]}")
+    # end = time.perf_counter()
+    # print("Time elapsed: {} second(s)".format(end-start))
+
+    # # Check if the results are the same
+    # for read_time in test_time_range:
+    #     print(read_time)
+    #     time_bin = decide_time_bin(read_time, start_time, time_step, range_len)
     #     print(f"read_time: {read_time}, bin: {time_bin}, bin_lower_bound: {time_range[time_bin]}")
+    #     current_bin = 0
+    #     # Check if the next bin up should be used and make sure the last bin
+    #     # Catches everything greater than the lower bound of the last bin
+    #     while read_time > time_range[current_bin] + time_step \
+    #     and current_bin + 1 < len(time_range):
+    #         current_bin += 1
+    #     print(f"read_time: {read_time}, bin: {current_bin}, bin_lower_bound: {time_range[current_bin]}")

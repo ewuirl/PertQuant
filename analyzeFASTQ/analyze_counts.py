@@ -530,7 +530,7 @@ def divide_binned_counts(dividend_params, dividend_perr, divisor_params, divisor
 def plot_time_binned_fits(target, comp, bin_arr, x_range, time_summed_counts_arr, params_arr, \
     fit_list, perr_arr, bin_step, save_folder, sum=True, y_lims=(0,0), is_save=True):
     """
-    plot_time_binned_fits(target, comp, bin_arr, x_range, time_summed_counts_arr, params_arr, \
+    plot_time_binned_fits(target, comp, bin_arr, x_range, time_summed_counts_arr, params_arr, 
     fit_list, perr_arr, bin_step, save_folder, sum=True, y_lims=(0,0), is_save=True)
 
     This function plots the time binned count data together with the fitted function.
@@ -758,7 +758,7 @@ def make_x_fit_arr(seq_len, min_len):
 def plot_binned_artificial_fits(subseq_len, target, comp, x_range, binned_counts_arr, \
     params_arr, fit_list, perr_arr, save_folder, sum=True, y_lims=(0,0), is_save=True):
     """
-    plot_binned_artificial_fits(subseq_len, target, comp, x_range, binned_counts_arr, \
+    plot_binned_artificial_fits(subseq_len, target, comp, x_range, binned_counts_arr, 
     params_arr, fit_list, perr_arr, save_folder, sum=True, y_lims=(0,0), is_save=True)
     
     This function plots the count data of "target subsequences" of the provided
@@ -830,7 +830,7 @@ def plot_binned_artificial_fits(subseq_len, target, comp, x_range, binned_counts
 def fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len, N, min_len, \
     fit_save_folder, power_func, summed_power_func, plot=True):
     """
-    fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len, N, min_len, \
+    fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len, N, min_len, 
     fit_save_folder, power_func, summed_power_func, plot=True)
 
     This function takes start (smallest) and end lengths for "target subsequences",
@@ -913,11 +913,46 @@ def fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len,
 
     return(all_params_arr, all_perr_arr, all_params_arr_s, all_perr_arr_s)
 
-def sum_by_len_artificial_seq_fits(target_fit_arr0, target_error_arr0, comp_fit_arr1, \
-    comp_error_arr1, start_len, end_len, N, min_len):
-    # Create arrays for storing the average fit values in.
-    sum_param_arr = np.zeros(np.shape(target_fit_arr0))
-    sum_err_arr = np.zeros(np.shape(target_error_arr0))
+def sum_by_len_artificial_seq_fits(target_fit_arr, target_error_arr, comp_fit_arr, \
+    comp_error_arr, start_len, end_len, N):
+    """
+    sum_by_len_artificial_seq_fits(target_fit_arr, target_error_arr, comp_fit_arr, \
+    comp_error_arr, start_len, end_len, N)
+
+    This function takes arrays of all the "target subsequence" fitted parameters
+    and estimated error, and sums the parameters and errors of the corresponding
+    complementary subsequence from another set of provided arrays.
+
+    Arguments:
+        target_fit_arr (arr): An array containing fitted parameters for all of 
+            the "target subsequences". Each row represents results for a 
+            different "target subsequence".
+        target_error_arr (arr): An array containing the estimated error for the 
+            fitted parameters for all of the "target subsequences". Each row 
+            represents results for a different "target subsequence".
+        comp_fit_arr (arr): An array containing fitted parameters for the
+            complements of all the "target subsequences". Each row represents 
+            results for a different "target subsequence".
+        comp_error_arr (arr): An array containing the estimated error for the 
+            fitted parameters for the complements of all the "target 
+            subsequences". Each row represents results for a different "target 
+            subsequence".
+        start_len (int): The minimum "target subsequence" length analyzed.
+        end_len (int): The maximum "target subsequence" length analyzed.
+        N (int): The length of the sequence.
+
+    Returns:
+        sum_param_arr (arr): An array containing summed target and complement
+            fitted parameters for all of the "target subsequences". Each row 
+            represents results for a different "target subsequence".
+        sum_err_arr (arr): An array containing error estimates of the summed 
+            target and complement fitted parameters for all of the "target 
+            subsequences". Each row represents results for a different "target 
+            subsequence".
+    """
+    # Create arrays for storing the summed fit values in.
+    sum_param_arr = np.zeros(np.shape(target_fit_arr))
+    sum_err_arr = np.zeros(np.shape(target_error_arr))
 
     # Make an index for storing values into the arrays
     save_index = 0
@@ -928,11 +963,10 @@ def sum_by_len_artificial_seq_fits(target_fit_arr0, target_error_arr0, comp_fit_
         comp_index += N - i + 1
         # Add up the param values + squared values
         for j in range(N - i + 1):
-            print(f"target:{target_fit_arr0[target_index]}, comp: {comp_fit_arr1[comp_index]}")
-            # sum_param_arr[save_index] += target_fit_arr0[target_index,:] + \
-            # comp_fit_arr1[comp_index,:]
-            # sum_err_arr[save_index] += np.sqrt(target_error_arr0[target_index,:] ** 2.0 + \
-            #     comp_error_arr1[comp_index,:] ** 2.0)
+            sum_param_arr[save_index] += target_fit_arr[target_index,:] + \
+            comp_fit_arr[comp_index,:]
+            sum_err_arr[save_index] += np.sqrt(target_error_arr[target_index,:] ** 2.0 + \
+                comp_error_arr[comp_index,:] ** 2.0)
             # Increase the read index
             target_index += 1
             # Decrease the comp index
@@ -942,7 +976,34 @@ def sum_by_len_artificial_seq_fits(target_fit_arr0, target_error_arr0, comp_fit_
         comp_index += N - i + 1
     return(sum_param_arr, sum_err_arr)
     
-def avg_by_len_artificial_seq_fits(fit_arr, fit_error_arr, start_len, end_len, N, min_len):
+def avg_by_len_artificial_seq_fits(fit_arr, fit_error_arr, start_len, end_len, N):
+    """
+    avg_by_len_artificial_seq_fits(fit_arr, fit_error_arr, start_len, end_len, N)
+
+    This function takes arrays of all the "target subsequence" fitted parameters
+    and estimated error, and averages the parameters and errors by subseqeuence
+    length.
+
+    Arguments:
+        fit_arr (arr): An array containing fitted parameters for all of 
+            the "target subsequences". Each row represents results for a 
+            different "target subsequence".
+        fit_error_arr (arr): An array containing the estimated error for the 
+            fitted parameters for all of the "target subsequences". Each row 
+            represents results for a different "target subsequence".
+        start_len (int): The minimum "target subsequence" length analyzed.
+        end_len (int): The maximum "target subsequence" length analyzed.
+        N (int): The length of the sequence.
+
+    Returns:
+        avg_param_arr (arr): An array containing fitted parameters for the 
+            "target subsequences", averaged by subsequence length. Each row 
+            represents results for a different target subsequence length.
+        avg_err_arr (arr): An array containing error estimates for the 
+            "target subsequences", averaged by subsequence length. Each row 
+            represents results for a different target subsequence length.
+            subsequence".
+    """
     # Create arrays for storing the average fit values in.
     array_len = end_len - start_len + 1
     avg_param_arr = np.zeros(array_len)
@@ -973,6 +1034,50 @@ def avg_by_len_artificial_seq_fits(fit_arr, fit_error_arr, start_len, end_len, N
 
 def ratio_by_len_artificial_seq_fits(num_fit_arr, num_err_arr, den_fit_arr, \
     den_err_arr, start_len, end_len, N):
+    """
+    ratio_by_len_artificial_seq_fits(num_fit_arr, num_err_arr, den_fit_arr, \
+    den_err_arr, start_len, end_len, N)
+
+    This function takes subsequence arrays of "target subsequence" fitted parameters
+    and estimated errors for two sequences, and calculates the ratio of the two
+    sequences using parameters fitted for subsequences of the same length. It 
+    also computes the errors of these ratios. It also computes the average ratio
+    for each subsequence length.
+
+    Arguments:
+        num_fit_arr (arr): An array containing fitted parameters for all of 
+            the "target subsequences" that will be used as the numerators in the
+            ratios. Each row represents results for a different "target subsequence".
+        num_err_arr (arr): An array containing the estimated error for the 
+            fitted parameters for all of the "target subsequences" that will be 
+            used as the numerators in the ratios. Each row represents results 
+            for a different "target subsequence".
+        den_fit_arr (arr): An array containing fitted parameters for all of 
+            the "target subsequences" that will be used as the denominators in the
+            ratios. Each row represents results for a different "target subsequence".
+        den_err_arr (arr): An array containing the estimated error for the 
+            fitted parameters for all of the "target subsequences" that will be 
+            used as the denominators in the ratios. Each row represents results 
+            for a different "target subsequence".
+        start_len (int): The minimum "target subsequence" length analyzed.
+        end_len (int): The maximum "target subsequence" length analyzed.
+        N (int): The length of the sequence.
+
+    Returns:
+        ratio_arr (arr): An array containing ratios of the parameters for the 
+            "target subsequences". Each row represents results for a different 
+            target subsequence.
+        ratio_err_arr (arr): An array containing ratio error estimates for the 
+            "target subsequences". Each row represents results for a different 
+            target subsequence.
+        avg_ratio_arr (arr): An array containing ratios of the parameters for the 
+            "target subsequences", averaged by subsequence length. Each row 
+            represents results for a different target subsequence length.
+        avg_ratio_err_arr (arr): An array containing ratio error estimates for 
+            the "target subsequences", averaged by subsequence length. Each row 
+            represents results for a different target subsequence length.
+            subsequence".
+    """
     # Make arrays to store values
     array_len = 0
     len_range = np.arange(start_len, end_len + 1)
@@ -1033,6 +1138,27 @@ def ratio_by_len_artificial_seq_fits(num_fit_arr, num_err_arr, den_fit_arr, \
 
 
 def get_box_plot_data(ratio_arr, start_len, end_len, N):
+    """
+    get_box_plot_data(ratio_arr, start_len, end_len, N)
+
+    This function takes an array of "target subsequence" parameter ratios, pulls
+    out the count ratios and puts them into arrays by subsequence length, and 
+    adds these arrays to a list. This list of arrays can then be used to plot 
+    box plots of the ratios by subsequence length.
+    
+    Arguments:
+        ratio_arr (arr): An array containing ratios of the parameters for the 
+            "target subsequences". Each row represents results for a different 
+            target subsequence.
+        start_len (int): The minimum "target subsequence" length analyzed.
+        end_len (int): The maximum "target subsequence" length analyzed.
+        N (int): The length of the sequence.
+
+    Returns:
+        box_plot_list (list): A list of arrays of "target subsequence" count 
+            ratios, where each array contains ratios for a different subsequence
+            length.
+    """
     box_plot_list = []
     read_index = 0
     for i in np.arange(start_len, end_len + 1):
@@ -1048,18 +1174,35 @@ def get_box_plot_data(ratio_arr, start_len, end_len, N):
     return(box_plot_list)
 
 
-def read_count_reads(count_read_file_name, time_step, run):
-    time_range = np.arange(time_step,run*60+ time_step,time_step)
+def read_count_reads(count_read_file_name, time_step, run_length):
+    """
+    read_count_reads(count_read_file_name, time_step, run)
+
+    This function takes in a file of read counts binned over time, and reads this
+    data into an array.
+
+    Arguments:
+        count_read_file_name (str): The path to the file containing the read
+            count data.
+        time_step (int): The time step in minutes that reads were filtered with.
+        run_length (int): The run length in hours.
+
+    Returns:
+        reads_array (arr): An array containing the total number of read counts
+            over time.
+    """
+    time_range = np.arange(time_step,run_length*60+ time_step,time_step)
     reads_array = np.zeros(len(time_range))
     with open(count_read_file_name, 'r') as count_read_file:
         line = count_read_file.readline().rstrip('\n')
         read_counts = line.split()
+    
+    reads_array[0] = float(read_counts[0])
+    for i in range(len(read_counts)-1):
+        reads_array[i+1] = float(read_counts[i+1])+reads_array[i]
+    return reads_array
+
         
-
-
-
-
-
 # # Test get_subsequence_counts
 # count_array = np.arange(int((8-1)*(7+1)/2))
 # sub_array = get_subsequence_counts(8,4,2,count_array)
