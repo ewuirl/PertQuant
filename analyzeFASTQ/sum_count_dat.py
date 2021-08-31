@@ -896,15 +896,14 @@ def create_time_test_dat_file(bin_range, save_file_name):
 if __name__ == "__main__":
     # Argument parser
     parser = argparse.ArgumentParser(description="Analyzes dat files of subsequence \
-        matches.")
+        matches. Optional arguments are provided to bin the summed data. \
+        Otherwise, the counts are summed together without binning.")
     parser.add_argument("dat_folder", type=str, help="The path to the folder \
         with the dat files to analyze.")
     parser.add_argument("save_file", type=str, help="The name extension to add to \
         save file names that results are saved to.")
     parser.add_argument("--settings", type=str, help="The path to the file \
         containing count analysis settings.")
-    parser.add_argument("--all", type=bool, help="If True, sums all subsequence \
-        counts together.")
     parser.add_argument("--barcoded", type=bool, help="If True, the program will \
         sort results by the barcode.")
     parser.add_argument("--time", type=int, help="Bins counts by the \
@@ -919,8 +918,8 @@ if __name__ == "__main__":
     parser.add_argument("--Qbin", type=float, help="Bins counts by the ")
     parser.add_argument("--Qhist", type=bool, help="If True, makes a histogram \
         of the average Q scores of the sequences.")
-    parser.add_argument("--Lhist", type=bool, help="If True, makes a histogram \
-        of the average Q scores of the sequences.")
+    # parser.add_argument("--Lhist", type=bool, help="If True, makes a histogram \
+    #     of the average Q scores of the sequences.")
     parser.add_argument("--beep", type=int, help="Plays a sound using beepy when \
         the program finishes running. To pick a sound, provide an integer from \
         1-7. To not play a sound, set to 0. Defaults to 1.")
@@ -975,21 +974,25 @@ if __name__ == "__main__":
     else:
         Pbin = 0.0
 
-    if args.Phist:
-        Phist = args.Phist
-    else:
-        Phist = False
+    # if args.Phist:
+    #     Phist = args.Phist
+    # else:
+    #     Phist = False
 
-    if args.Lhist:
-        Lhist = args.Lhist
-    else:
-        Lhist = False
+    # if args.Lhist:
+    #     Lhist = args.Lhist
+    # else:
+    #     Lhist = False
 
     if args.beep:
         which_beep = args.beep 
     else:
         which_beep = 1
 
+    assert Pbin == 0 or Qbin == 0, "Subsequence counts can be binned by either P or Q score, not both."
+    assert Pbin >= 0 and Pbin <= 1, "P bin size must be between 0 and 1."
+    assert Qbin >= 0, "Q score bin size must be greater than or equal to 1."
+    assert time_step >= 0, "Time step bin size must be greater than or equal to 0."
 
     # Get all the dat files
     dat_files = Path(dat_folder).rglob("*.dat")
@@ -1029,19 +1032,20 @@ if __name__ == "__main__":
     else:
         pass
 
-    # Make length histogram
-    if Lhist:
-        pass
-    else:
-        pass
+    # # Make length histogram
+    # if Lhist:
+    #     pass
+    # else:
+    #     pass
 
     # Make save folder if counts are being summed
-    if time_step > 0 or Pbin > 0 or Qbin > 0:
+    if time_step + Pbin + Qbin > 0:
         save_folder = make_count_save_folder(dat_folder, save_file_name, time_step, Qbin, Pbin)
         start = time.perf_counter()
     else:
         pass
 
+    # P binning only.
     if Pbin > 0.0 and time_step == 0.0:
         # Set some globals
         P_corr_bins = np.arange(0, 1, Pbin)
@@ -1053,10 +1057,9 @@ if __name__ == "__main__":
         # Write the summedd counts to save files
         write_summed_counts(save_folder, save_file_name, Pbin, Qbin, time_step, \
             total_target_sum_array_list, total_targetc_sum_array_list, prog)
-    else:
-        pass
 
-    if Pbin == 0.0 and Qbin == 0.0 and time_step > 0.0:
+    # Time step binning only.
+    elif Pbin == 0.0 and Qbin == 0.0 and time_step > 0.0:
         # Get the time range info
         start_time, end_time, time_step_range, time_range = get_time_range(time_step, run_length, dat_folder)
         time_step_td = dt.timedelta(minutes=time_step)
@@ -1069,16 +1072,21 @@ if __name__ == "__main__":
         # Write the summedd counts to save files
         write_summed_counts(save_folder, save_file_name, Pbin, Qbin, time_step, \
             total_target_sum_array_list, total_targetc_sum_array_list, prog)
-    else:
+    
+    # No binning.
+    elif Pbin == 0.0 and Qbin == 0.0 and time_step == 0.0:
         start = time.perf_counter()
         total_target_sum_array_list, total_targetc_sum_array_list = read_dat_file_all_parallel(dat_file_list, target_lengths)
         time_step = 1
         for i in range(len(total_target_sum_array_list)):
-            save_file_path = f"{dat_folder}/all_target_{i}_counts.txt"
+            save_file_path = f"{dat_folder}/{save_file_name}_all_target_{i}_counts.txt"
             write_all_summed_counts_array(save_file_path, total_target_sum_array_list[i])
-            save_file_path = f"{dat_folder}/all_target_comp_{i}_counts.txt"
+            save_file_path = f"{dat_folder}/{save_file_name}_all_target_comp_{i}_counts.txt"
             write_all_summed_counts_array(save_file_path, total_targetc_sum_array_list[i])
         pass
+
+    else:
+        print("I don't know how you got here. Try ")
 
     if time_step > 0 or Pbin > 0 or Qbin > 0:
         end = time.perf_counter()

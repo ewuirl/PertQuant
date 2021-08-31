@@ -63,7 +63,7 @@ def read_settings(settings_path):
                 if line_list[1] != "":
                     save_path = line_list[1]
                 else:
-                    save_path = "counts"
+                    save_path = "default"
             elif line_list[0] == "# barcode_file_path":
                 if line_list[1] != "":
                     barcode_file_path = line_list[1]
@@ -240,18 +240,21 @@ def check_list_min_unique_len(target_list, min_len, barcode_list=[], \
         unique (bool): True if all the subsequences of length min_len of the 
             sequences in the target_list and barcode_list are unique. False 
             otherwise.
-        target_target_list (list): A list of tuples of (t1, t2, j, min_len). t1 
-            and t2 are the indices of the targets that have subsequences of length 
-            min_len that aren't unique. j is the index of where the subsequence 
-            starts in sequence t1.
-        target_barcode_list (list): A list of tuples of (t1, b, j, min_len). t1 
-            and b are the indices of the target and barcode that have subsequences 
-            of length min_len that aren't unique. j is the index of where the 
-            subsequence starts in sequence t1.
-        barcode_barcode_list (list): A list of tuples of (b1, b2, j, min_len). 
-            b1 and b2 are the indices of the barcodes that have subsequences of 
-            length min_len that aren't unique. j is the index of where the 
-            subsequence starts in sequence b1.
+        target_target_list (list): A list of tuples of (t1, t2, j, min_len, 
+            nonunique_subseq). t1 and t2 are the indices of the targets that 
+            have subsequences of length min_len that aren't unique. j is the 
+            index of where the subsequence starts in sequence t1. 
+            nonunique_subseq is the nonunique subsequence.
+        target_barcode_list (list): A list of tuples of (t1, b, j, min_len, 
+            nonunique_subseq). t1 and b are the indices of the target and 
+            barcode that have subsequences of length min_len that aren't unique. 
+            j is the index of where the subsequence starts in sequence t1. 
+            nonunique_subseq is the nonunique subsequence.
+        barcode_barcode_list (list): A list of tuples of (b1, b2, j, min_len,
+            nonunique_subseq). b1 and b2 are the indices of the barcodes that 
+            have subsequences of length min_len that aren't unique. j is the 
+            index of where the subsequence starts in sequence b1. 
+            nonunique_subseq is the nonunique subsequence.
     """
     unique = True
     target_len = len(target_list[0])
@@ -276,10 +279,10 @@ def check_list_min_unique_len(target_list, min_len, barcode_list=[], \
                     pass
                 else:
                     if target_list[t1][j:j + min_len] in target_list[t2]:
-                        print(f'Found target {t1}\'s subseq of len {min_len} in target {t2}')
+                        print(f'Found target {t1}\'s subseq {target_list[t1][j:j + min_len]}of len {min_len} in target {t2}')
                         if record:
                             # Add the duplicate to the target-target list
-                            target_target_list.append((t1, t2, j, min_len))
+                            target_target_list.append((t1, t2, j, min_len, target_list[t1][j:j + min_len]))
                         else:
                             pass
                         unique = False
@@ -289,10 +292,10 @@ def check_list_min_unique_len(target_list, min_len, barcode_list=[], \
                 # Iterate through the barcodes if there are barcodees
                 for b in range(len(barcode_list)):
                     if target_list[t1][j:j + min_len] in barcode_list[b]:
-                        print(f'Found target {t1}\'s subseq of len {min_len} in barcode {b}')
+                        print(f'Found target {t1}\'s subseq {target_list[t1][j:j + min_len]}of len {min_len} in barcode {b}')
                         if record:
                             # Add the duplicate to the target-barcode list    
-                            target_barcode_list.append((t1, b, j, min_len))
+                            target_barcode_list.append((t1, b, j, min_len, target_list[t1][j:j + min_len]))
                         else:
                             pass
                         unique = False
@@ -314,10 +317,10 @@ def check_list_min_unique_len(target_list, min_len, barcode_list=[], \
                         pass
                     else:
                         if barcode_list[b1][j:j + min_len] in barcode_list[b2]:
-                            print(f'Found barcode {b1}\'s subseq of len {min_len} in target {b2}')
+                            print(f'Found barcode {b1}\'s subseq {barcode_list[b1][j:j + min_len]} of len {min_len} in target {b2}')
                             if record:
                                 # Add the duplicate to the target-target list
-                                barcode_barcode_list.append((b1, b2, j, min_len))
+                                barcode_barcode_list.append((b1, b2, j, min_len, barcode_list[b1][j:j + min_len]))
                             else:
                                 pass
                             unique = False
@@ -325,10 +328,8 @@ def check_list_min_unique_len(target_list, min_len, barcode_list=[], \
                             pass
     else:
         pass
-    if record:
-        return (unique, target_target_list, target_barcode_list, barcode_barcode_list)
-    else:
-        return unique
+    return (unique, target_target_list, target_barcode_list, barcode_barcode_list)
+    
 
 def find_min_unique_len(target_list, min_unique_len=5, barcode_list=[], \
     record=False):
@@ -358,18 +359,21 @@ def find_min_unique_len(target_list, min_unique_len=5, barcode_list=[], \
         min_unique_len (int): The minimum length such that subsequences of 
             length min_unique_len of the sequences in the target_list and 
             barcode_list are unique. 
-        target_target_list (list): A list of tuples of (t1, t2, j). t1 and t2 
-            are the indices of the targets that have subsequences of length 
-            min_len that aren't unique. j is the index of where the subsequence 
-            starts in sequence t1.
-        target_barcode_list (list): A list of tuples of (t1, b, j). t1 and b 
-            are the indices of the target and barcode that have subsequences of
-            length min_len that aren't unique. j is the index of where the 
-            subsequence starts in sequence t1.
-        barcode_barcode_list (list): A list of tuples of (b1, b2, j). b1 and b2 
-            are the indices of the barcodes that have subsequences of length 
-            min_len that aren't unique. j is the index of where the subsequence 
-            starts in sequence b1.
+        target_target_list (list): A list of tuples of (t1, t2, j, min_len, 
+            nonunique_subseq). t1 and t2 are the indices of the targets that 
+            have subsequences of length min_len that aren't unique. j is the 
+            index of where the subsequence starts in sequence t1. 
+            nonunique_subseq is the nonunique subsequence.
+        target_barcode_list (list): A list of tuples of (t1, b, j, min_len, 
+            nonunique_subseq). t1 and b are the indices of the target and 
+            barcode that have subsequences of length min_len that aren't unique. 
+            j is the index of where the subsequence starts in sequence t1. 
+            nonunique_subseq is the nonunique subsequence.
+        barcode_barcode_list (list): A list of tuples of (b1, b2, j, min_len,
+            nonunique_subseq). b1 and b2 are the indices of the barcodes that 
+            have subsequences of length min_len that aren't unique. j is the 
+            index of where the subsequence starts in sequence b1. 
+            nonunique_subseq is the nonunique subsequence.
     """
     found = False
     # Create lists to store the identities of the duplicate subsequences in
@@ -391,24 +395,86 @@ def find_min_unique_len(target_list, min_unique_len=5, barcode_list=[], \
     while found == False and min_unique_len <= max_len:
         min_unique_len += 1
         print(f'checking {min_unique_len}')
-        if record:
-            found, tt_list, tb_list, bb_list \
+        found, tt_list, tb_list, bb_list \
             = check_list_min_unique_len(target_list, min_unique_len, \
                 barcode_list=barcode_list, record=record)
+        if record:
             target_target_list.append(tt_list)
             target_barcode_list.append(tb_list)
             barcode_barcode_list.append(bb_list)
         else:
-            found = check_list_min_unique_len(target_list, min_unique_len, \
-                barcode_list=barcode_list)
+            pass
         print(f'found = {found}')
     print(f'found min len: {min_unique_len}')
-    if record:
-        return (min_unique_len, found, target_target_list, target_barcode_list, \
+    
+    return (min_unique_len, found, target_target_list, target_barcode_list, \
             barcode_barcode_list)
-    else:
-        return (min_unique_len, found)
 
+def record_nonunique_subseq_list(nonunique_subseq_list, file):
+    """
+    record_nonunique_subseq_list(nonunique_subseq_list, file)
+
+    Write the nonunique subsequence information from a list to the provided file.
+
+    Arguments:
+        nonunique_subseq_list (list): A list of tuples of nonunique subsequence
+            information. See check_list_min_unique_len or find_min_unique_len 
+            for more details.
+        file (file): The file to save the nonunique subsequence information to.
+    Returns:
+        Nothing.
+    """
+    # Write the nonunique subsequence information
+    if len(nonunique_subseq_list) > 0:
+        for entry in nonunique_subseq_list:
+            for item in entry:
+                file.write(f"{item}\t")
+            file.write("\n")
+    # Write an empty line if the list is empty
+    else:
+        file.write("\n")
+
+def record_nonunique_subseq(save_file_name, save_folder, target_target_list,\
+    target_barcode_list, barcode_barcode_list):
+    """
+    record_nonunique_subseq(save_file_name, save_folder, target_target_list,\
+    target_barcode_list, barcode_barcode_list)
+
+    Write the nonunique subsequence information from a list to the provided file.
+
+    Arguments:
+        save_file_name (str): The custom part of the name of the file to save 
+            the nonunique subsequence information to.
+        save_folder (str): The path to the save folder.
+        target_target_list (list): A list of tuples of (t1, t2, j, min_len, 
+            nonunique_subseq). t1 and t2 are the indices of the targets that 
+            have subsequences of length min_len that aren't unique. j is the 
+            index of where the subsequence starts in sequence t1. 
+            nonunique_subseq is the nonunique subsequence.
+        target_barcode_list (list): A list of tuples of (t1, b, j, min_len, 
+            nonunique_subseq). t1 and b are the indices of the target and 
+            barcode that have subsequences of length min_len that aren't unique. 
+            j is the index of where the subsequence starts in sequence t1. 
+            nonunique_subseq is the nonunique subsequence.
+        barcode_barcode_list (list): A list of tuples of (b1, b2, j, min_len,
+            nonunique_subseq). b1 and b2 are the indices of the barcodes that 
+            have subsequences of length min_len that aren't unique. j is the 
+            index of where the subsequence starts in sequence b1. 
+            nonunique_subseq is the nonunique subsequence.
+    Returns:
+        Nothing.
+    """
+    with open(f"{save_folder}/{save_file_name}_nonunique_subseq.txt", 'w') as file:
+        # Record the target-target nonunique subsequences
+        file.write("Target-Target Nonunique Subsequences\n")
+        record_nonunique_subseq_list(target_target_list, file)
+        # Record the target-barcode nonunique subsequences
+        file.write("Target-Barcode Nonunique Subsequences\n")
+        record_nonunique_subseq_list(target_barcode_list, file)
+        # Record the barcode-barcode nonunique subsequences
+        file.write("Barcode-Barcode Nonunique Subsequences\n")
+        record_nonunique_subseq_list(barcode_barcode_list, file)
+        
 
 def get_avg_Q_score(Q_score_index, seq_len, lines):
     """
@@ -919,22 +985,28 @@ if __name__ == "__main__":
 
     # Make the target dictionary
     target_dict, target_comp_dict, target_list, target_len, target_num_seq = \
-    make_dictionary(target_file_path, is_sticky=target_sticky)
+    make_dictionary(target_file_path, sticky_end=sticky_end, \
+        is_sticky=target_sticky)
 
     # Read in the barcode file if the data is barcoded and make a dictionary
     if args.barcoded:
         barcoded=True
         barcode_dict, barcode_comp_dict, barcode_list, barcode_len, barcode_num_seq = \
-        make_dictionary(barcode_file_path, is_sticky=barcode_sticky) 
+        make_dictionary(barcode_file_path, sticky_end=sticky_end, \
+            is_sticky=barcode_sticky) 
     else:
         barcoded=False
         barcode_dict={}
 
     # Find min unique subsequence length
     if args.barcoded:
-        subseq_min, found = find_min_unique_len(target_list, min_unique_len=min_len, barcode_list=barcode_list, record=record)
+        subseq_min, found, target_target_list, target_barcode_list, \
+            barcode_barcode_list = find_min_unique_len(target_list, \
+                min_unique_len=min_len, barcode_list=barcode_list, record=record)
     else:
-        subseq_min, found = find_min_unique_len(target_list, min_unique_len=min_len, record=record)
+        subseq_min, found, target_target_list, target_barcode_list, \
+            barcode_barcode_list = find_min_unique_len(target_list, \
+                min_unique_len=min_len, record=record)
     
     assert found==True,"No unique minimum subsequence length found."
 
@@ -948,6 +1020,13 @@ if __name__ == "__main__":
 
     # Create the save folder
     save_folder = make_save_folder(fastq_folder, save_path=save_path)
+
+    # Record any nonunique subsequences
+    if record:
+        record_nonunique_subseq(save_file_name, save_folder, target_target_list,\
+            target_barcode_list, barcode_barcode_list)
+    else:
+        pass
 
     # Create header file
     header_file_name = write_header_file(save_folder, save_file_name, target_dict, \

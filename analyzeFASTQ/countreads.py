@@ -28,7 +28,7 @@ def get_time(index):
         lines (list): A list of lines read in from a FASTQ file.
 
     Output:
-        time_bin (datetime): the bin of 
+        time_bin (datetime): the bin of read.
     """
     global lines 
     global start_time 

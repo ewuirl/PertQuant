@@ -1,0 +1,35 @@
+Target-Target Nonunique Subsequences
+t1  t2  j   len0 nonunique_subseq
+Target-Barcode Nonunique Subsequences
+t1  b   j   len1 nonunique_subseq
+Barcode-Barcode Nonunique Subsequences
+b1  b2  j   len2 nonunique_subseq
+-------------- Everything Below This Line is Just Informational. --------------
+Last Updated: 8/31/2021
+
+General Info
+This file illustrates the format of a nonunique subsequence text file, generated
+if record is set to True in the countmatches settings file.
+
+
+File Location and Naming
+This file is saved in the save folder specified in the countmatches settings file.
+See ex_countmatches_settings.txt for more information. The file name will end in
+"_nonunique_subseq.txt".
+
+
+File Format
+countmatches.py creates target_list, a list of target sequences and their 
+complements, and barcode_list, a list of barcode sequences and their complements.
+These lists have the following format:
+    target_list: [target0, target_comp0, target1, target_comp1, ...]
+    barcode_list: [barcode0, barcode_comp0, barcode1, barcode_comp1, ...]
+
+t1 and t2 are the indices of the sequences in target_list that have a shared 
+    nonunique subsequence.
+t1 and b are the indices of the sequences in target_list and barcode_list that 
+    have a shared nonunique subsequence.
+b1 and b2 are the indices of the sequences in barcode_list that have a shared 
+    nonunique subsequence.
+j is the index of where the subsequence starts in the first sequence. 
+nonunique_subseq is the nonunique subsequence.

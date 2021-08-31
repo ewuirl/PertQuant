@@ -1,0 +1,86 @@
+target_file_path: /path/to/target/files.txt
+handle_repeat_error: False 
+# save_path: default
+# barcode_file_path: 
+# repeat_list: 
+# n_repeat: 
+# target_sticky: 
+# barcode_sticky: 
+# sticky_end: 
+# min_len: 5 
+# record: 
+--------------------- Delete this line and anything below. ---------------------
+Last Updated: 8/31/2021
+
+General Info
+This file is used to set settings for use with countmatches.py. 
+
+
+File Location and Naming
+countmatches.py is written to search by default a subfolder called "counts" in 
+the provided fastq folder for a settings file called *"_settings.txt". However, 
+if the file has a different name or location, an optional argument may be 
+provided to specify a path to the settings file using --settings.
+
+
+File Format
+All argument names must be present, but arguments do not have to be provided for
+all of them. The optional arguments are preceded with #. These can be left 
+blank if the default setting is desired. Arguments should not be places in 
+quotes.
+
+Arguments
+target_file_path: The target file should contain the target sequences in the
+    sequencing run. See ex_target_file.txt for more information.
+    
+    /path/to/target/files.txt - The path to the file of target sequences.
+
+handle_repeat_error: Whether or not countmatches should handle the repeat error.
+    
+    True - countmatches will handle the repeat error (not finalized/written yet)
+    False - countmatches will not not handle the repeat error
+
+Optional Arguments
+save_path: The folder that the count .dat files should be saved to. countmatches 
+    will check to see if the folder already exists. If not it will make it. The
+    default save folder is a subfolder called "counts" in the provided fastq 
+    folder.
+    
+    /path/to/save/folder - The path to the desired save folder. It is fine to 
+        have spaces in the path.
+    default - Default option.
+    blank - Same as default.
+
+barcode_file_path: The barcode file should contain the barcode sequences in the
+    sequencing run. See ex_barcode_file.txt for more information. The default
+    means countmatches.py will assume the data is not barcoded.
+
+    /path/to/barcode/file - The path to the file of barcode sequences.
+
+repeat_list: A list of the repeat sequences to check. If provided, the sequences
+    should be placed without quotes on the same line, separated by spaces. 
+    Defaults to a list of ["TG", "ATT"].
+
+    repeat_seq_0 repeat_seq_1 [repeat_seq] - Custom repeat list.
+
+n_repeat (int): An integer of the minimum number of sequential repeats to count as a 
+    repeat error. Defaults to 3.
+
+target_sticky (bool): Whether or not the sequences in the target file have a 
+    sticky end. Defaults to False.
+
+barcode_sticky (bool): Whether or not the sequences in the barcode file have a 
+    sticky end. Defaults to False.
+
+sticky_end: The sticky end to account for if target_sticky and/or barcode_sticky
+    is true. Provide it without quotation marks. Defaults to "TGCA".
+
+min_len (int): The desired minimum subsequence length to obtain counts for. 
+    countmatches.py will check the minimum unique subsequence length for all of
+    the targets, barcodes, and their complements, and use min_len if it is 
+    greater than or equal to the minimum unique subsequence length. The default
+    (and suggested minimum) value is 5.
+
+record (bool): If True, if nonunique subsequences are found, the subsequence and 
+    the sequences containing it will be recorded. Defaults to False. See 
+    ex_nonunique_subseq.txt for an example of the file this creates.

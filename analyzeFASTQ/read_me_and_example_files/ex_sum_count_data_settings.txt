@@ -1,0 +1,45 @@
+# Targets = num_targets
+0 target_sequence0 
+1 target_sequence1 
+# Barcodes = num_barcodes
+0 barcode_sequence0 
+1 barcode_sequence1 
+# Analysis Settings 
+min_len = 5 
+handle_repeat_error = False 
+repeat_list = [] 
+n_repeat = 0 
+# Notes 
+
+-------------- Everything Below This Line is Just Informational. --------------
+Last Updated: 8/31/2021
+
+General Info
+This file illustrates the format of the count settings text file, generated
+when countmatches.py is run. It records information about the sequences counted,
+as well as the count settings.
+
+
+File Location and Naming
+This file is saved in the save folder specified in the countmatches settings file.
+See ex_countmatches_settings.txt for more information. The file name will begin
+with "count_settings_".
+
+
+File Format
+This file is divided into 4 sections:
+    Targets, Barcodes, Analysis Settings, and Notes
+
+The Targets section provides the number of targets and the target sequences 
+    (without sticky ends).
+
+The Barcodes section provides the number of barcodes and the barcode sequences 
+    (without sticky ends).
+
+The Analysis Settings section provides the minimum counted subsequence length,
+    whether or not repeat errors were handled, a list of repeat sequences, and
+    the number of sequential repeat sequences to be considered a repeat error.
+
+The Notes section includes any additional notes about the run or analysis. This
+    can be manually entered, or provided as a commandline argument when running
+    countmatches.py.

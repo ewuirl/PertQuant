@@ -1,0 +1,19 @@
+barcode_sequence0
+barcode_sequence1
+barcode_sequence2
+--------------------- Delete this line and anything below. ---------------------
+Last Updated: 8/31/2021
+
+General Info
+This file contains the barcode sequences used in a sequencing run. 
+
+
+File Location and Naming
+This file can be anywhere. If a sequencing run is barcoded, add the path to the
+barcode file as an argument in the count_matches_settings text file.
+
+
+File Format
+This file should only contain barcode sequences, and each barcode should be on a 
+separate line. The barcodes can be sandwiched by sticky end sequences, but the 
+sticky end sequence should be provided in the count_matches_settings text file.

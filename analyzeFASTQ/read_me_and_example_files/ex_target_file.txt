@@ -1,0 +1,19 @@
+target_sequence0
+target_sequence1
+target_sequence2
+--------------------- Delete this line and anything below. ---------------------
+Last Updated: 8/31/2021
+
+General Info
+This file contains the target sequences used in a sequencing run. 
+
+
+File Location and Naming
+This file can be anywhere. The path to the target file must be used as an 
+argument in the count_matches_settings text file.
+
+
+File Format
+This file should only contain targets sequences, and each target should be on a 
+separate line. The targets can be sandwiched by sticky end sequences, but the 
+sticky end sequence should be provided in the count_matches_settings text file.

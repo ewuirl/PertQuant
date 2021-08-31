@@ -1,0 +1,26 @@
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
+-------------- Everything Below This Line is Just Informational. --------------
+Last Updated: 8/31/2021
+
+General Info
+This file illustrates the format of summed count files created by sum_count_dat.py.
+
+
+File Location and Naming
+If the data is not binned during summing, these files are placed in the .folder 
+containing the .dat files. Files are named as 
+[custom_name] + "_all_" + [target_index] + "_counts.txt" for the target sequence and
+[custom_name] + "_all_" + [target_index] + "_comp_counts.txt" for the target complement.
+
+If the data is binned, they are placed in a subfolder. File naming consists of 
+[custom_name]_[bin_type]-[bin_size]_[target_index] + "_counts.txt" for the target sequence and
+[custom_name]_[bin_type]-[bin_size]_[target_index] + "_comp_counts.txt" for the target complement
+
+File Format
+If the data is not binned during summing, all the subsequence counts are on one 
+line. If the data is binned during summing, each bin gets its own line. In each 
+line the subsequence counts are separated by spaces. The subsequence counts are 
+ordered from smallest to largest subsequence length. For a given subsequence 
+length, the subsequence counts are sorted by the index of the starting location 
+of the subsequences, in increasing order.
