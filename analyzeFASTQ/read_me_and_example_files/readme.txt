@@ -1,4 +1,4 @@
-Last Updated 07/06/2021
+Last Updated 09/01/2021
 
 # Connecting to Minion with SSH
 
@@ -65,12 +65,14 @@ Last Updated 07/06/2021
 
 # Making Read Length Histograms with NanoPlot
 
-    To make Read Length Histograms with NanoPlot:
+    To make Read Length Histograms with NanoPlot, place a copy of 
+    NanoPlot_hist.sh in /usr/local/bin/. Then move to the folder you want the 
+    plots to be saved in and run the following command:
 
         NanoPlot_hist.sh --fastq fastq_file [fastq_file]
 
     Example:
-
+        
         NanoPlot_hist.sh --fastq "/path/to/folder/with/fastq/files/"*.fastq "/path/to/folder/with/fastq/files/"*.fastq
 
 
