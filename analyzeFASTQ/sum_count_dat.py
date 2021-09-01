@@ -934,10 +934,10 @@ if __name__ == "__main__":
     else:
         count_settings_path  = f"{dat_folder}/count_settings_{save_file_name}.txt"
 
-    if args.sum:
-        do_sum = args.sum
-    else:
-        do_sum = False
+    # if args.sum:
+    #     do_sum = args.sum
+    # else:
+    #     do_sum = False
 
     if args.barcoded:
         barcoded = args.barcoded
@@ -974,10 +974,10 @@ if __name__ == "__main__":
     else:
         Pbin = 0.0
 
-    # if args.Phist:
-    #     Phist = args.Phist
-    # else:
-    #     Phist = False
+    if args.Phist:
+        Phist = args.Phist
+    else:
+        Phist = False
 
     # if args.Lhist:
     #     Lhist = args.Lhist
