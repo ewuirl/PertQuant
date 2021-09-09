@@ -528,10 +528,10 @@ def divide_binned_counts(dividend_params, dividend_perr, divisor_params, divisor
     return (ratio_arr, ratio_err_arr)
 
 def plot_time_binned_fits(target, comp, bin_arr, x_range, time_summed_counts_arr, params_arr, \
-    fit_list, perr_arr, bin_step, save_folder, sum=True, y_lims=(0,0), is_save=True):
+    fit_list, perr_arr, bin_step, save_folder, is_sum=True, y_lims=(0,0), is_save=True):
     """
     plot_time_binned_fits(target, comp, bin_arr, x_range, time_summed_counts_arr, params_arr, 
-    fit_list, perr_arr, bin_step, save_folder, sum=True, y_lims=(0,0), is_save=True)
+    fit_list, perr_arr, bin_step, save_folder, is_sum=True, y_lims=(0,0), is_save=True)
 
     This function plots the time binned count data together with the fitted function.
     Each time bin gets its own plot, and if is_save is True, plots are saved in 
@@ -594,7 +594,7 @@ def plot_time_binned_fits(target, comp, bin_arr, x_range, time_summed_counts_arr
         ax.set_xlabel('Length of Subsequence')
         ax.set_ylabel('Number of Matches')
         if is_save:
-            if sum:
+            if is_sum:
                 png_save_name = f"{save_folder}/{target}_sum_fit_{bin_type}-{bin_upper_bound:.0f}".replace(".","-")
             else:
                 png_save_name = f"{save_folder}/{target}_fit_{bin_type}-{bin_upper_bound:.0f}".replace(".","-")
