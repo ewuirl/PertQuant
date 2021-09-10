@@ -919,7 +919,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyzes fastq files for \
         perfect sequence matches of different lengths")
     parser.add_argument("fastq_folder", type=str, help="The path to the folder \
-        with the fastq files to analyze.")
+        with the fastq files to analyze. Fastq files in subdirectories will also \
+        be analyzed.")
     parser.add_argument("save_file", type=str, help="The name extension to add to \
         save file names that results are saved to.")
     parser.add_argument("--settings", type=str, help="The path to the file \
@@ -929,8 +930,6 @@ if __name__ == "__main__":
     parser.add_argument("--note", type=str, help="Adds a note to the header file.")
     parser.add_argument("--prog", type=bool, help="If True, prints progress \
         messages. Defaults to False.")
-    parser.add_argument("--pf", type=bool, help="If True, finds the pass and fail \
-        folders and analyzes fastq files in both. Defaults to False.")
     parser.add_argument("--beep", type=int, help="Plays a sound using beepy when \
         the program finishes running. To pick a sound, provide an integer from \
         1-7. To not play a sound, set to 0. Defaults to 1.")
@@ -960,7 +959,6 @@ if __name__ == "__main__":
                 settings_path = str(input(f"Please enter the path to the settings file.\n"))
             else:
                 settings_path = settings_path_list[settings_path_index]
-
     if args.note:
         note = args.note
     else:
@@ -969,10 +967,6 @@ if __name__ == "__main__":
         prog = args.prog
     else:
         prog = False
-    if args.pf:
-        pf = args.pf 
-    else:
-        pf = False
     if args.beep:
         which_beep = args.beep 
     else:
@@ -1034,15 +1028,8 @@ if __name__ == "__main__":
     repeat_list=repeat_list, n_repeat=n_repeat, note="")
 
     # Create list of fastq files to analyze
-    if pf:
-        fastq_pass_files = Path(f"{fastq_folder}/fastq_pass").glob("*.fastq") 
-        fastq_pass_file_list = [str(file) for file in fastq_pass_files]
-        fastq_fail_files = Path(f"{fastq_folder}/fastq_fail").glob("*.fastq")
-        fastq_fail_file_list = [str(file) for file in fastq_fail_files]
-        fastq_file_list = fastq_pass_file_list + fastq_fail_file_list
-    else:    
-        fastq_files = Path(fastq_folder).rglob("*.fastq")
-        fastq_file_list = [str(file) for file in fastq_files] 
+    fastq_files = Path(fastq_folder).rglob("*.fastq")
+    fastq_file_list = [str(file) for file in fastq_files] 
 
     # Make a list to contain sequence lengths
     len_list = []

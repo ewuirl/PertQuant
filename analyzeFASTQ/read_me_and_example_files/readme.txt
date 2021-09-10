@@ -72,7 +72,7 @@ Last Updated 09/01/2021
         NanoPlot_hist.sh --fastq fastq_file [fastq_file]
 
     Example:
-        
+
         NanoPlot_hist.sh --fastq "/path/to/folder/with/fastq/files/"*.fastq "/path/to/folder/with/fastq/files/"*.fastq
 
 
@@ -120,15 +120,15 @@ Last Updated 09/01/2021
     Dated_Sample_Folder (see Nanopore Folder Structure above), and make sure the
     name ends in "_settings.txt". Then run the following command.
 
-        python3 countmatches.py /path/to/Dated_Sample_Folder custom_name --pf True
+        python3 countmatches.py /path/to/Dated_Sample_Folder custom_name 
+
+    Notes:
+        (1) fastq files in /path/to/Dated_Sample_Folder and its subdirectories 
+        will be analyzed.
 
     Other Use
       - The countmatches settings file can be placed elsewhere, but the path to the
         file must be provide with the --settings argument.
-      - If the --pf flag is not True, then /path/to/fastq_folder, (eg 
-        /path/to/fastq_fail) should be provided instead of 
-        /path/to/Dated_Sample_Folder
-
 
 # Summing Count Data
 
