@@ -73,7 +73,12 @@ Last Updated 09/01/2021
 
     Example:
 
-        NanoPlot_hist.sh --fastq "/path/to/folder/with/fastq/files/"*.fastq "/path/to/folder/with/fastq/files/"*.fastq
+        To look in multiple specific folders for fastq files:
+        NanoPlot_hist.sh --fastq "/path/to/folder/with/fastq/files1/"*.fastq "/path/to/folder/with/fastq/files2/"*.fastq
+
+        To look in all the subdirectories of a folder for fastq files:
+            NanoPlot_hist.sh --fastq "/path/to/folder/with/fastq/files/"*/*.fastq
+
 
 
 # Nanopore Folder Structure

@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.optimize
+import matplotlib.pyplot as plt
 
 def check_min_unique_len(seq_list, seq_len, min_len):
     """

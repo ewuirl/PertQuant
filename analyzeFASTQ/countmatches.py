@@ -279,7 +279,7 @@ def check_list_min_unique_len(target_list, min_len, barcode_list=[], \
                     pass
                 else:
                     if target_list[t1][j:j + min_len] in target_list[t2]:
-                        print(f'Found target {t1}\'s subseq {target_list[t1][j:j + min_len]}of len {min_len} in target {t2}')
+                        print(f'Found target {t1}\'s subseq {target_list[t1][j:j + min_len]} of len {min_len} in target {t2}')
                         if record:
                             # Add the duplicate to the target-target list
                             target_target_list.append((t1, t2, j, min_len, target_list[t1][j:j + min_len]))
@@ -292,7 +292,7 @@ def check_list_min_unique_len(target_list, min_len, barcode_list=[], \
                 # Iterate through the barcodes if there are barcodees
                 for b in range(len(barcode_list)):
                     if target_list[t1][j:j + min_len] in barcode_list[b]:
-                        print(f'Found target {t1}\'s subseq {target_list[t1][j:j + min_len]}of len {min_len} in barcode {b}')
+                        print(f'Found target {t1}\'s subseq {target_list[t1][j:j + min_len]} of len {min_len} in barcode {b}')
                         if record:
                             # Add the duplicate to the target-barcode list    
                             target_barcode_list.append((t1, b, j, min_len, target_list[t1][j:j + min_len]))
@@ -680,7 +680,7 @@ def analyze_seq(index):
         target = target_list[int(2*i)]
         targetc = target_list[int(2*i+1)]
         target_len = len(target)
-        # Figure out the maximum nunber of subsequences possible
+        # Figure out the maximum number of subsequences possible
         max_num_subseqs = target_len - min_len + 1
         # Calculate the count array length
         array_len = int(max_num_subseqs * (max_num_subseqs+1)/2)
