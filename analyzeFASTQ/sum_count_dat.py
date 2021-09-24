@@ -1081,7 +1081,7 @@ if __name__ == "__main__":
         for i in range(len(total_target_sum_array_list)):
             save_file_path = f"{dat_folder}/{save_file_name}_all_target_{i}_counts.txt"
             write_all_summed_counts_array(save_file_path, total_target_sum_array_list[i])
-            save_file_path = f"{dat_folder}/{save_file_name}_all_target_comp_{i}_counts.txt"
+            save_file_path = f"{dat_folder}/{save_file_name}_all_target_{i}_comp_counts.txt"
             write_all_summed_counts_array(save_file_path, total_targetc_sum_array_list[i])
         pass
 
