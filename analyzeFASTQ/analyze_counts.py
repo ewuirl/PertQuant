@@ -1203,6 +1203,138 @@ def read_count_reads(count_read_file_name, time_step, run_length):
         reads_array[i+1] = float(read_counts[i+1])+reads_array[i]
     return reads_array
 
+def drop_subseq_counts(count_array, drop_list):
+    
+    ndims = np.ndim(count_array)
+    if ndims == 2:
+        orig_rows, orig_cols = np.shape(count_array)
+    elif ndims == 1:
+        orig_cols = len(count_array)
+    else:
+        print("count array has more than 2 dimensions")
+    new_cols = orig_cols - len(drop_list)
+    if ndims == 2:
+        new_count_arr = np.zeros((orig_rows, new_cols))
+    else:
+        new_count_arr = np.zeros(new_cols)
+    start = 0
+    save = 0
+    for drop_col in np.sort(drop_list):
+        num_cols = drop_col - start
+        if ndims == 2:
+            new_count_arr[:,save:save+num_cols] = count_array[:,start:drop_col]
+        else:
+            new_count_arr[save:save+num_cols] = count_array[start:drop_col]
+        start = drop_col + 1
+        save = save + num_cols
+    if start < orig_cols:
+        if ndims == 2:
+            new_count_arr[:,save:] = count_array[:,start:]
+        else:
+            new_count_arr[save:] = count_array[start:]
+    return(new_count_arr)
+
+def check_extended_sequence(subseq_len, extension, extended_seq, extended_seq_ID, target_list, sandwich):
+    clear = True
+    match_dict = {}
+    front_check_list = []
+    end_check_list = []
+    if subseq_len <= len(extension):
+        for i in range(subseq_len-1):
+            front_check_list.append(extended_seq[len(extension)-subseq_len+i+1:len(extension)+i+1])
+            end_check_list.append(extended_seq[-len(extension)-subseq_len+i+1:-len(extension)+i+1])
+    else:
+        for i in range(len(extension)):
+            front_check_list.append(extended_seq[i:subseq_len+i])
+            end_check_list.append(extended_seq[-subseq_len-i:len(extended_seq)-i])
+    for i in range(len(front_check_list)):
+        front_subseq = front_check_list[i]
+        end_subseq = end_check_list[i]
+        for j in range(len(target_list)):
+            if sandwich == "sandwich" or sandwich == "front":
+                front_loc = target_list[j].find(front_subseq)
+                if front_loc >= 0:
+                    print(f"Found subseq {front_subseq} in target {target_list[j]}")
+                    match_dict.setdefault(front_subseq, []).append((subseq_len, "f", extended_seq_ID, j, front_loc))
+                    clear = False
+                else:
+                    pass
+            else:
+                pass
+            if sandwich == "sandwich" or sandwich == "end":
+                end_loc = target_list[j].find(end_subseq)
+                if end_loc >= 0:
+                    print(f"Found subseq {end_subseq} in target {target_list[j]}")
+                    match_dict.setdefault(end_subseq, []).append((subseq_len, "b", extended_seq_ID, j, end_loc))
+                    clear = False
+                else:
+                    pass
+            else:
+                pass
+    return clear, match_dict
+
+def update_dict(dict1, dict2):
+    for key in dict2.keys():
+        val = dict2[key]
+        dict1.setdefault(key, [])
+        for entry in val:
+            dict1[key].append(entry)
+    return dict1
+
+def add_dicts(dict_list):
+    newdict = {}
+    for dictionary in dict_list:
+        for key in dictionary.keys():
+            val = dictionary[key]
+            newdict.setdefault(key, [])
+            for entry in val:
+                newdict[key].append(entry)
+    return newdict
+
+def extended_sequence_find_min(subseq_len, extensions, extended_seq, extended_seq_ID, target_list):
+    success = 0
+    check_len = subseq_len - 1
+    match_dict = {}
+    front_ext = extensions[0]
+    end_ext = extensions[1]
+    while success != 2 and check_len < len(target_list[0]):
+        check_len += 1
+        front_success, front_subseq_match_dict = check_extended_sequence(check_len, front_ext, extended_seq, \
+                                                                         extended_seq_ID, target_list, "front")
+        update_dict(match_dict, front_subseq_match_dict)
+        end_success, end_subseq_match_dict = check_extended_sequence(check_len, end_ext, extended_seq, \
+                                                                     extended_seq_ID, target_list, "end")
+        update_dict(match_dict, end_subseq_match_dict)
+        success = front_success + end_success
+    return (check_len, success, match_dict)
+
+def check_extended_sequence_list(subseq_len, extension, extended_seq_list, target_list, sandwich):
+    success_arr = np.zeros(len(extended_seq_list))
+    check_len = subseq_len - 1
+    match_dict = {}
+    while sum(success_arr) < 4 and check_len < len(target_list[0]):
+        check_len += 1
+        for j in range(len(extended_seq_list)):
+            success_arr[j], subseq_match_dict = check_extended_sequence(check_len, extension, \
+                                                                        extended_seq_list[j], j, target_list, \
+                                                                        sandwich)
+            match_dict.update(subseq_match_dict)
+    return (check_len, success_arr, match_dict)
+
+def dict_to_drop_lists(num_seq, match_dict):
+    drop_lists = []
+    for i in range(num_seq):
+        drop_lists.append([])
+    for key in match_dict.keys():
+        val_list = match_dict[key]
+        for match_tuple in val_list:
+            seq_index = match_tuple[3]
+            drop_index = match_tuple[4]
+            if drop_index not in drop_lists[seq_index]:
+                drop_lists[seq_index].append(drop_index)
+            else:
+                pass
+    return drop_lists
         
 # # Test get_subsequence_counts
 # count_array = np.arange(int((8-1)*(7+1)/2))
