@@ -1335,7 +1335,66 @@ def dict_to_drop_lists(num_seq, match_dict):
             else:
                 pass
     return drop_lists
-        
+
+def find_outliers(count_arr, sequence, seq_len, min_len):
+    outlier_list = []
+    arr_index = 0
+    means = np.zeros(seq_len-min_len+1)
+    std_devs = np.zeros(seq_len-min_len+1)
+    for i in range(seq_len - min_len + 1):
+        # Set the length of the subsequence to examine
+        n = i + min_len
+        # Iterate through the different subsequences
+        subseq_count_arr = np.zeros(seq_len + 1 - n)
+        for j in range(seq_len + 1 - n):
+            subseq_count_arr[j] = count_arr[arr_index]
+            arr_index += 1
+        if n < seq_len:
+            mean = np.mean(subseq_count_arr)
+            std_dev = np.std(subseq_count_arr)
+            means[i] = mean
+            std_devs[i] = std_dev
+            Z_arr = (subseq_count_arr - mean)/std_dev
+            print(f"Subsequence len {n}, mean = {mean:.2f}, std_dev = {std_dev:.2f}")
+            for j in range(seq_len + 1 - n):
+                if abs(Z_arr[j]) >= 3:
+                    print(f"{sequence[j:j+n]},\tpos = {j}:{j+n},\t{subseq_count_arr[j]},\tZ = {Z_arr[j]:.2f}")
+                    outlier_list.append((arr_index-(seq_len + 1 - n)+j, Z_arr[j], sequence[j:j+n]))
+                else:
+                    pass
+        else:
+            means[-1] = subseq_count_arr[0]
+            std_devs[-1] = 0.0
+            print(f"Subsequence {n},\tmean = {subseq_count_arr[0]}")
+    return(outlier_list, means, std_devs)
+
+def calc_mean_subseq_count(count_array, x_array):
+    """
+    Drops nonunique subsequence counts
+    """
+    min_len = x_array[0]
+    max_len = x_array[-1]
+    binned_counts = []
+    mean_arr = np.zeros(int(max_len-min_len+1))
+    std_dev_arr = np.zeros(int(max_len-min_len+1))
+    current_len = min_len
+    storage_list = []
+    for i in range(len(x_array)):
+        if current_len == x_array[i]:
+            storage_list.append(count_array[i])
+        else:
+            binned_counts.append(storage_list)
+            storage_list = [count_array[i]]
+            current_len += 1
+            if i == len(x_array)-1:
+                binned_counts.append(storage_list)
+            else:
+                pass
+    for i in range(len(binned_counts)):
+        mean_arr[i] = np.mean(binned_counts[i])
+        std_dev_arr[i] = np.std(binned_counts[i])
+    return(mean_arr, std_dev_arr)
+
 # # Test get_subsequence_counts
 # count_array = np.arange(int((8-1)*(7+1)/2))
 # sub_array = get_subsequence_counts(8,4,2,count_array)
