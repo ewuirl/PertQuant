@@ -1,9 +1,9 @@
-import sys
-sys.path.append('../')
-from simCRN.ml_nupack import gen_complement
+from PertQuant.simCRN.ml_nupack import gen_complement
 import time
 import random as rand 
 import concurrent.futures
+import os
+from datetime import datetime
 
 barcode = 'TATGAGGACGAATCTCCCGCTTATA'
 target = 'ATGGTCGAATCAAGGGGAGG'
@@ -207,4 +207,84 @@ def generate_test_fastq_p(i):
 # end = time.perf_counter()
 # print('Multiprocess Time elapsed: {} second(s)'.format(end-start))
 
-generate_test_fastq_p(0)
+# generate_test_fastq_p(0)
+
+# Generate test fastq with multiple targets
+# Set up the save folder
+now = datetime.now()
+outer_folder = "/Users/emilywu/OneDrive - Massachusetts Institute of Technology/Minion/test_analyzeFASTQ"
+folder_name = "1-1ratio"
+save_folder = f"{outer_folder}/{now.year}{now.month:02d}{now.day:02d}_{now.hour:02d}{now.minute:02d}_MC-110826_0_AAA000_{folder_name}"
+if not os.path.exists(save_folder):
+    os.makedirs(save_folder)
+else:
+	pass
+# Set up generation information
+target_list = ["CAATTCATCCATATTGCACCGTGAG", "CAGTGATTTTCGGCGGGCTCTAAAG"]	# barcodes A and B
+comp_list = []
+for target in target_list:
+	comp_list.append(gen_complement(target))
+std_sequence_id = f"@a631bd03-5b9d-44a5-9c01-af5ce3a7c77e runid=6bb769124712ca33f52fe35403bbb34fce14140a read=4 ch=84 start_time=2021-09-24T17:37:56Z flow_cell_id=AAA000 protocol_group_id=test_analyzeFASTQ sample_id={folder_name}"
+sticky_end = "CCTGCAGG"
+
+def make_Q_score(sequence):
+	Q_score = ""
+	for base in sequence:
+		base_Q_score = rand.randint(33,126)
+		Q_score += chr(base_Q_score)
+	return Q_score
+
+def generate_ratio_test_fastq_p(i):
+	with open(f'{save_folder}/test_{i}.fastq', 'w') as file:
+		for i in range(num_lines):
+			# Decide how many barcodes to add to sequence
+			n = rand.randrange(2,21)
+			# Decide whether to use sequence or complement
+			which_target = rand.random()
+			comp = rand.random()
+
+			# Write sequence ID
+			file.write(f'{std_sequence_id}\n')
+
+			# Write sequence
+			sequence = "TGCAGG"
+			for j in range(n):
+				# Decide which target
+				if which_target <= ratio_threshold:
+					target = 0
+				else:
+					target = 1
+				# Decide target or complement
+				if comp <= 0.5:
+					sequence += target_list[target]
+				else:
+					sequence += comp_list[target]
+				sequence += sticky_end
+			# Remove the last 2 bases (simulating RE enzyme cut)
+			sequence = sequence[:-2]			
+			# Write the sequence
+			file.write(f'{sequence}\n')
+
+			# Write '+'
+			file.write('+\n')
+
+			# Write quality score
+			Q_score = make_Q_score(sequence)
+			if i < num_lines-1:
+				file.write(f'{Q_score}\n')
+			else:
+				file.write(Q_score)
+
+# Generate test files with multi_processing
+ratio = 1 	# change this
+ratio_threshold = 1/(1+ratio)
+num_files = 4
+# start timing
+start = time.perf_counter()
+
+with concurrent.futures.ProcessPoolExecutor() as executor:
+	executor.map(generate_ratio_test_fastq_p, range(num_files))
+
+# end timing
+end = time.perf_counter()
+print('Multiprocess Time elapsed: {} second(s)'.format(end-start))
