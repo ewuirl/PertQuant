@@ -1,4 +1,4 @@
-# import sys
+import sys
 # sys.path.append('../')
 from PertQuant.simCRN.ml_nupack import gen_complement
 import concurrent.futures
@@ -167,13 +167,10 @@ def make_dictionary(file_name, sticky_end="TGCA", is_sticky=True):
         # Save the sequence length of the first line as a reference
         # If the file has sequences sandwiched by sticky ends
         if is_sticky:
-            ref_len = len(lines[0])-1-2*sticky_len
+            ref_len = len(lines[0].rstrip('\n'))-2*sticky_len
         # If the file has sequences without sticky ends
         else:
-            ref_len = len(lines[0])-1
-        # If there is only one sequence there's no new line character
-        if len(lines)==1:
-            ref_len += 1
+            ref_len = len(lines[0].rstrip('\n'))
         try:
             for i in range(len(lines)):
                 # Read in the whole sequence
