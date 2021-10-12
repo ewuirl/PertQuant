@@ -924,6 +924,8 @@ if __name__ == "__main__":
         containing count analysis settings.")
     parser.add_argument("--barcoded", type=bool, help="If True, the program will \
         try to identify the barcode ID of each sequence.")
+    parser.add_argument("--serial", type=str, help="If True, counts matches serially \
+        instead of in parallel. Defaults to False.")
     parser.add_argument("--note", type=str, help="Adds a note to the header file.")
     parser.add_argument("--prog", type=bool, help="If True, prints progress \
         messages. Defaults to False.")
@@ -956,6 +958,10 @@ if __name__ == "__main__":
                 settings_path = str(input(f"Please enter the path to the settings file.\n"))
             else:
                 settings_path = settings_path_list[settings_path_index]
+    if args.serial:
+        serial = args.serial
+    else:
+        serial = False
     if args.note:
         note = args.note
     else:
@@ -1034,7 +1040,10 @@ if __name__ == "__main__":
     # Analyze all the fastq files
     index = 0
     start = time.perf_counter()
-    for read_file_path in fastq_file_list:
+
+    # Serial counting
+    if serial:
+        for read_file_path in fastq_file_list:
         # Read in the data from a fastq file
         read_file =  open(read_file_path, 'r')
         lines = read_file.readlines()
@@ -1044,16 +1053,13 @@ if __name__ == "__main__":
         save_file = init_save_file(read_file_path, save_folder, save_file_name, \
             header_file_name)
         # Parallelize the subsequence counting
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            results = executor.map(analyze_seq, index_arr)
-            for result in results:
-                # Unpack the subsequence counts
-                seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
-                target_count_list, targetc_count_list = result
-                # Write the results to the save file
-                write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, \
-                    barcode_ID, has_repeat_error, target_count_list, \
-                    targetc_count_list)
+        for index in index_arr:
+            seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
+                target_count_list, targetc_count_list = analyze_seq(index)
+            # Write the results to the save file
+            write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, \
+                barcode_ID, has_repeat_error, target_count_list, \
+                targetc_count_list)
         read_file.close()
         save_file.close()
         if prog:
@@ -1061,6 +1067,35 @@ if __name__ == "__main__":
             print(f"Analyzed {index}/{len(fastq_file_list)} files.")
         else:
             pass
+    # Parallelized counting
+    else:
+        for read_file_path in fastq_file_list:
+            # Read in the data from a fastq file
+            read_file =  open(read_file_path, 'r')
+            lines = read_file.readlines()
+            # index_list = range(int(len(lines)/4))
+            index_arr = np.arange(0,len(lines),4)
+            # Create a save file
+            save_file = init_save_file(read_file_path, save_folder, save_file_name, \
+                header_file_name)
+            # Parallelize the subsequence counting
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                results = executor.map(analyze_seq, index_arr)
+                for result in results:
+                    # Unpack the subsequence counts
+                    seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
+                    target_count_list, targetc_count_list = result
+                    # Write the results to the save file
+                    write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, \
+                        barcode_ID, has_repeat_error, target_count_list, \
+                        targetc_count_list)
+            read_file.close()
+            save_file.close()
+            if prog:
+                index += 1
+                print(f"Analyzed {index}/{len(fastq_file_list)} files.")
+            else:
+                pass
     end = time.perf_counter()
     print("Time elapsed: {} second(s)".format(end-start))
 
