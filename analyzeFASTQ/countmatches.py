@@ -569,6 +569,30 @@ def count_matches_seq(target, targetc, sequence, target_len, max_num_subseqs, \
             comp_count_array[array_index+j] = sequence.count(targetc[j:j + n])
     return (count_array, comp_count_array)
 
+def check_repeat_errors(sequence, repeat_list, n_repeat):
+    """
+    check_repeat_errors(sequence, repeat_list, n_repeat)
+
+    Determines whether a sequence has a repeat error.
+
+    Arguments:
+        sequence (str): a string representing the sequence to check 
+        repeat_list (list): a list of strings of the repeat sequences to check for
+        n (int): the minimum repeat number of the repeat sequence to look for, eg
+            if the repeat sequence is "TG", the sequence is considered to contain
+            a repeat error if it contains a sequence of "TG" repeated n times.
+
+    Returns:
+        has_error (int): 1 if a repeat sequence was found, 0 otherwise.
+    """
+    has_error = 0
+    for repeat in repeat_list:
+        if n_repeat*repeat in sequence:
+            has_error = 1
+        else:
+            pass
+    return has_error
+
 def analyze_seq(index):
     """
     analyze_seq(index)
@@ -1044,24 +1068,24 @@ if __name__ == "__main__":
     # Serial counting
     if serial:
         for read_file_path in fastq_file_list:
-        # Read in the data from a fastq file
-        read_file =  open(read_file_path, 'r')
-        lines = read_file.readlines()
-        # index_list = range(int(len(lines)/4))
-        index_arr = np.arange(0,len(lines),4)
-        # Create a save file
-        save_file = init_save_file(read_file_path, save_folder, save_file_name, \
-            header_file_name)
-        # Parallelize the subsequence counting
-        for index in index_arr:
-            seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
-                target_count_list, targetc_count_list = analyze_seq(index)
-            # Write the results to the save file
-            write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, \
-                barcode_ID, has_repeat_error, target_count_list, \
-                targetc_count_list)
-        read_file.close()
-        save_file.close()
+            # Read in the data from a fastq file
+            read_file =  open(read_file_path, 'r')
+            lines = read_file.readlines()
+            # index_list = range(int(len(lines)/4))
+            index_arr = np.arange(0,len(lines),4)
+            # Create a save file
+            save_file = init_save_file(read_file_path, save_folder, save_file_name, \
+                header_file_name)
+            # Serialize the subsequence counting
+            for index in index_arr:
+                seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
+                    target_count_list, targetc_count_list = analyze_seq(index)
+                # Write the results to the save file
+                write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, \
+                    barcode_ID, has_repeat_error, target_count_list, \
+                    targetc_count_list)
+            read_file.close()
+            save_file.close()
         if prog:
             index += 1
             print(f"Analyzed {index}/{len(fastq_file_list)} files.")

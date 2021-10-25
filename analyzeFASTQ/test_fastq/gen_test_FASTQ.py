@@ -265,8 +265,52 @@ def generate_ratio_test_fastq_p(i):
 			else:
 				file.write(Q_score)
 
-def generate_timed_ratio_test_fastq_p(i, num_reads, read_time, read_rate, read_step):
-	with open(f'{save_folder}/test_{i}.fastq', 'w') as file:
+def add_read_errors(sequence, p_corr, p_repeat, repeat_list):
+	bases = "ATGC"
+	read_sequence = ""
+	p_err = (1.0-p_corr-p_repeat)/3.0
+	for i in range(len(sequence)):
+		base = sequence[i]
+		error_chance = rand.random()
+		homopolymer_chance = rand.random()
+		# Add a chance for a read repeat error for repeated bases in sequence
+		if i > 0 and sequence[i-1] == base and homopolymer_chance <= p_repeat:
+			n_repeats = rand.randrange(1,20)
+			for j in range(n_repeats):
+				read_sequence += base
+		else:
+			# Read the base correctly
+			if error_chance <= p_corr:
+				read_sequence += base
+			# Add repeat error
+			elif p_corr < error_chance <= p_corr + p_repeat: # 30/1000 reads had a repeat error
+				if len(repeat_list) > 0:
+					n_repeats = rand.randrange(1,20)
+					repeat = rand.choice(repeat_list)
+					for j in range(n_repeats):
+						read_sequence += repeat
+				else:
+					pass
+			# Insert a base
+			elif p_corr + p_repeat < error_chance <= p_corr + p_repeat + p_err:
+				read_sequence += rand.choice(bases)
+				read_sequence += base
+			# Misread the base
+			elif p_corr + p_repeat + p_err < error_chance <= p_corr + p_repeat + p_err * 2:
+				read_sequence += rand.choice(bases.replace(base,""))
+			# Delete the base
+			else:
+				pass
+	
+	return read_sequence
+
+def generate_timed_ratio_test_fastq_p(i, num_reads, read_time, read_rate, read_step, 
+	p_corr=1.0, p_repeat=0.03, repeat_list=[]):
+	if p_corr == 1.0:
+		file_name = f'{save_folder}/test_{i}.fastq'
+	else:
+		file_name = f'{save_folder}/test_pcorr_{p_corr}_prep_{p_repeat}_{i}'.replace('.','-')+'.fastq'
+	with open(file_name, 'w') as file:
 		for i in range(num_lines):
 			# Decide how many barcodes to add to sequence
 			n = rand.randrange(2,21)
@@ -290,11 +334,15 @@ def generate_timed_ratio_test_fastq_p(i, num_reads, read_time, read_rate, read_s
 					target = 0
 				else:
 					target = 1
-				# Decide target or complement
-				if comp <= 0.5:
+				# Decide target or complement, and add errors if p_corr < 1.0
+				if comp <= 0.5 and p_corr == 1.0:
 					sequence += target_list[target]
-				else:
+				elif comp <= 0.5 and p_corr < 1.0:
+					sequence += add_read_errors(target_list[target], p_corr, p_repeat, repeat_list)
+				elif comp > 0.5 and p_corr == 1.0:
 					sequence += comp_list[target]
+				else:
+					sequence += add_read_errors(comp_list[target], p_corr, p_repeat, repeat_list)
 				sequence += sticky_end
 			# Remove the last 2 bases (simulating RE enzyme cut)
 			sequence = sequence[:-2]			
@@ -315,7 +363,7 @@ def generate_timed_ratio_test_fastq_p(i, num_reads, read_time, read_rate, read_s
 	return (num_reads, read_time)
 
 ratio = 4 	# change this
-folder_name = "1-2ratio" # change this
+folder_name = f"1-{ratio}ratio" # change this
 num_files = 24 # change this
 ratio_threshold = 1/(1+ratio)
 now = dt.datetime.now()
@@ -337,7 +385,7 @@ std_sequence_id = f"@a631bd03-5b9d-44a5-9c01-af5ce3a7c77e runid=6bb769124712ca33
 sticky_end = "CCTGCAGG"
 
 
-# Generate test files with multi_processing
+# # Generate test files with multi_processing
 # # start timing
 # start = time.perf_counter()
 # with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -346,14 +394,38 @@ sticky_end = "CCTGCAGG"
 # end = time.perf_counter()
 # print('Multiprocess Time elapsed: {} second(s)'.format(end-start))
 
+# # Generate test files with different times
+# # start timing
+# start = time.perf_counter()
+# read_time = now
+# read_rate = 100
+# read_step = 5
+# num_reads = 0
+# for i in range(num_files):
+# 	num_reads, read_time = generate_timed_ratio_test_fastq_p(i, num_reads, read_time, read_rate, read_step)
+# end = time.perf_counter()
+# print('Time elapsed: {} second(s)'.format(end-start))
+
+
+# Add read errors
+repeat_list = ["A","T","G","C","AG","AC","AT","GC","GA","GT","CG","CA","CT","TA",\
+"TC","TG"]
+p_corr = 0.94
+p_repeat = 0.03
+
+# # test add_read_errors
+# for i in range(100):
+# 	error_seq = add_read_errors(target_list[0], p_corr, p_repeat, repeat_list)
+
+# Generate test files with different times with errors
 # start timing
 start = time.perf_counter()
-# Generate test files with different time
 read_time = now
 read_rate = 100
 read_step = 5
 num_reads = 0
 for i in range(num_files):
-	num_reads, read_time = generate_timed_ratio_test_fastq_p(i, num_reads, read_time, read_rate, read_step)
+	num_reads, read_time = generate_timed_ratio_test_fastq_p(i, num_reads, read_time, \
+		read_rate, read_step, p_corr=p_corr, p_repeat=p_repeat, repeat_list=repeat_list)
 end = time.perf_counter()
 print('Time elapsed: {} second(s)'.format(end-start))
