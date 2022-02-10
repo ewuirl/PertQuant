@@ -271,7 +271,7 @@ def read_dat_file_Pbin(dat_file_path):
     each read. It sums the counts in each bin, and returns an array of these
     summed, binned counts. Each column in the array represents the counts for a
     different subsequence, and each row represents the counts for a different
-    bin. Each time bin is upper bound inclusive and lower bound exclusive, 
+    bin. Each P(corr) bin is upper bound inclusive and lower bound exclusive, 
     except the first and last bins. The first and last bins are both upper and
     lower bound inclusive.
 
@@ -411,6 +411,97 @@ def read_dat_file_bin_parallel(bin_range, bin_func, dat_file_list, target_length
                 total_targetc_sum_array_list[i] += targetc_sum_array_list[i]
 
     return (total_target_sum_array_list, total_targetc_sum_array_list)
+
+def read_dat_file_Qbinpf(dat_file_path):
+    """
+    read_dat_file_read_dat_file_Qbinpf(dat_file_path)
+
+    This function takes a path to a dat file of counts and bins each read's 
+    counts into a pass or fail bin by its Q score base on the value of Qbinpf. 
+    It sums the counts in each bin, and returns an array of these summed, binned 
+    counts. Each column in the array represents the counts for a different 
+    subsequence, and each row represents the counts for a different bin. 
+
+    Arguments:
+        dat_file_path (str): The path to the dat file to get base-averaged Q 
+            scores for.
+
+    Global Arguments:
+        n_targets (int): The number of target sequences in the run.
+        target_lengths (list): A list of the target lengths (int).
+        n_barcodes (int): The number of barcode sequences.
+        min_len (int): The minimum subsequence length that was counted.
+        barcoded (bool): If True, the read data is barcoded, and will be sorted
+            according to barcode as well. Specified by command-line argument. 
+            Defaults to False.
+        prog (bool): If True, progress statements are printed. Specified by     
+            command-line argument. Defaults to False.
+        Qbinpf (float): The Q score cutoff to decide whether to place a read in 
+            the pass or fail bin.
+
+    Returns:
+        target_sum_array_list (list): A list of arrays of subsequence counts 
+            binned (pass/fail) and summed by Q-score. Each target gets its own 
+            array. 
+        targetc_sum_array_list (list): A list of arrays of complement subsequence 
+            counts binned (pass/fail) and summed by Q-score. Each target gets its 
+            own array. 
+    """
+    global n_targets
+    global target_lengths
+    global n_barcodes
+    global min_len
+    global barcoded 
+    global prog
+    global Qbinpf
+
+    with open(dat_file_path, 'r') as dat_file:
+        header = dat_file.readline()
+        # Set up the lists of summed arrays
+    
+        target_sum_array_list = []
+        targetc_sum_array_list = []
+        for i in range(n_targets):
+            target_len = target_lengths[i]
+            # Figure out the maximum nunber of subsequences possible
+            max_num_subseqs = target_len - min_len + 1
+            # Calculate the count array length
+            array_len = int(max_num_subseqs * (max_num_subseqs+1)/2)
+            target_sum_array_list.append(np.zeros((2,array_len), dtype=int))
+            targetc_sum_array_list.append(np.zeros((2,array_len), dtype=int))
+        else:
+            pass
+
+        while True:
+            # Read the sequence ID
+            seq_ID = dat_file.readline()
+            if not seq_ID:
+                break
+            # Get sequence info
+            seq_ID = seq_ID.rstrip('\n')
+            features = dat_file.readline().rstrip('\n')
+            read_time_str, avg_Q_score, read_len, barcode_ID, has_repeat_error =\
+            get_seq_info(seq_ID, features)
+
+            # Figure out which bin to place the read in
+            if avg_Q_score < Qbinpf:
+                pfbin = 0
+            else:
+                pfbin = 1
+
+            # Get count info
+            for i in range(n_targets):
+                # Get target count info
+                target_sum_array_list[i][pfbin,:] += read_count_line(dat_file)
+                # Get complement count info
+                targetc_sum_array_list[i][pfbin,:] += read_count_line(dat_file)
+        if prog:
+            dat_file_name = dat_file_path.split("/")[-1]
+            dat_file_name_list = dat_file_name.split("_")
+            print(f"Finished counting {dat_file_name_list[1]} file {dat_file_name_list[3]} count data.")
+        else:
+            pass
+        return(target_sum_array_list, targetc_sum_array_list)
 
 def decide_time_bin(read_time, start_time, time_delta, range_len):
     """
@@ -904,20 +995,24 @@ if __name__ == "__main__":
         save file names that results are saved to.")
     parser.add_argument("--settings", type=str, help="The path to the file \
         containing count analysis settings.")
-    parser.add_argument("--barcoded", type=bool, help="If True, the program will \
+    parser.add_argument("--barcoded", type=str, help="If True, the program will \
         sort results by the barcode.")
     parser.add_argument("--time", type=int, help="Bins counts by the \
         provided time step in minutes. Default is to not bin by time.")
     parser.add_argument("--run", type=int, help="The length of the sequencing run \
         in hours. Defaults to 24 hours.")
-    parser.add_argument("--prog", type=bool, help="If True, prints progress \
+    parser.add_argument("--prog", type=str, help="If True, prints progress \
         messages.")
-    parser.add_argument("--Pbin", type=float, help="Bins counts by the ")
-    parser.add_argument("--Phist", type=bool, help="If True, makes a histogram \
+    parser.add_argument("--Pbin", type=float, help="Bins counts by the provided \
+        P(corr) bin size")
+    parser.add_argument("--Phist", type=str, help="If True, makes a histogram \
         of the average P(corr) of the sequences.")
-    parser.add_argument("--Qbin", type=float, help="Bins counts by the ")
-    parser.add_argument("--Qhist", type=bool, help="If True, makes a histogram \
+    parser.add_argument("--Qbin", type=float, help="Bins counts by the provided \
+        Q score bin size ")
+    parser.add_argument("--Qhist", type=str, help="If True, makes a histogram \
         of the average Q scores of the sequences.")
+    parser.add_argument("--Qbinpf", type=float, help="Bins counts by the provided \
+        cutoff Qscore.")
     # parser.add_argument("--Lhist", type=bool, help="If True, makes a histogram \
     #     of the average Q scores of the sequences.")
     parser.add_argument("--beep", type=int, help="Plays a sound using beepy when \
@@ -940,7 +1035,7 @@ if __name__ == "__main__":
     #     do_sum = False
 
     if args.barcoded:
-        barcoded = args.barcoded
+        barcoded = eval(args.barcoded)
     else:
         barcoded = False
 
@@ -960,12 +1055,12 @@ if __name__ == "__main__":
         Qbin = 0.0
 
     if args.prog:
-        prog = args.prog
+        prog = eval(args.prog)
     else:
         prog = False
 
     if args.Qhist:
-        Qhist = args.Qhist
+        Qhist = eval(args.Qhist)
     else:
         Qhist = False
 
@@ -975,9 +1070,14 @@ if __name__ == "__main__":
         Pbin = 0.0
 
     if args.Phist:
-        Phist = args.Phist
+        Phist = eval(args.Phist)
     else:
         Phist = False
+
+    if args.Qbinpf:
+        Qbinpf = args.Qbinpf
+    else:
+        Qbinpf = 0.0
 
     # if args.Lhist:
     #     Lhist = args.Lhist
@@ -1073,8 +1173,26 @@ if __name__ == "__main__":
         write_summed_counts(save_folder, save_file_name, Pbin, Qbin, time_step, \
             total_target_sum_array_list, total_targetc_sum_array_list, prog)
     
+    # Qscore Pass/Fail Bin
+    elif Qbinpf != 0.0:
+        start = time.perf_counter()
+        Qbinpf_range = np.zeros(2)
+        total_target_sum_array_list, total_targetc_sum_array_list = \
+        read_dat_file_bin_parallel(Qbinpf_range, read_dat_file_Qbinpf, dat_file_list, target_lengths)
+        time_step = 1
+        for i in range(len(total_target_sum_array_list)
+            ):
+            save_file_path = f"{dat_folder}/{save_file_name}_Qbin_fail_target_{i}_counts.txt"
+            write_all_summed_counts_array(save_file_path, total_target_sum_array_list[i][0,:])
+            save_file_path = f"{dat_folder}/{save_file_name}_Qbin_pass_target_{i}_counts.txt"
+            write_all_summed_counts_array(save_file_path, total_target_sum_array_list[i][1,:])
+            save_file_path = f"{dat_folder}/{save_file_name}_Qbin_fail_target_{i}_comp_counts.txt"
+            write_all_summed_counts_array(save_file_path, total_targetc_sum_array_list[i][0,:])
+            save_file_path = f"{dat_folder}/{save_file_name}_Qbin_pass_target_{i}_comp_counts.txt"
+            write_all_summed_counts_array(save_file_path, total_targetc_sum_array_list[i][1,:])
+
     # No binning.
-    elif Pbin == 0.0 and Qbin == 0.0 and time_step == 0.0:
+    elif Pbin == 0.0 and Qbin == 0.0 and time_step == 0.0 and Qbinpf == 0.0:
         start = time.perf_counter()
         total_target_sum_array_list, total_targetc_sum_array_list = read_dat_file_all_parallel(dat_file_list, target_lengths)
         time_step = 1
@@ -1083,10 +1201,9 @@ if __name__ == "__main__":
             write_all_summed_counts_array(save_file_path, total_target_sum_array_list[i])
             save_file_path = f"{dat_folder}/{save_file_name}_all_target_{i}_comp_counts.txt"
             write_all_summed_counts_array(save_file_path, total_targetc_sum_array_list[i])
-        pass
 
     else:
-        print("I don't know how you got here. Try ")
+        print("I don't know how you got here.")
 
     if time_step > 0 or Pbin > 0 or Qbin > 0:
         end = time.perf_counter()

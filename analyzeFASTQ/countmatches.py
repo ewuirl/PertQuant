@@ -951,7 +951,7 @@ if __name__ == "__main__":
     parser.add_argument("--serial", type=str, help="If True, counts matches serially \
         instead of in parallel. Defaults to False.")
     parser.add_argument("--note", type=str, help="Adds a note to the header file.")
-    parser.add_argument("--prog", type=bool, help="If True, prints progress \
+    parser.add_argument("--prog", type=str, help="If True, prints progress \
         messages. Defaults to False.")
     parser.add_argument("--beep", type=int, help="Plays a sound using beepy when \
         the program finishes running. To pick a sound, provide an integer from \
@@ -983,7 +983,7 @@ if __name__ == "__main__":
             else:
                 settings_path = settings_path_list[settings_path_index]
     if args.serial:
-        serial = args.serial
+        serial = eval(args.serial)
     else:
         serial = False
     if args.note:
@@ -991,7 +991,7 @@ if __name__ == "__main__":
     else:
         note = ""
     if args.prog:
-        prog = args.prog
+        prog = eval(args.prog)
     else:
         prog = False
     if args.beep:
@@ -1067,6 +1067,7 @@ if __name__ == "__main__":
 
     # Serial counting
     if serial:
+        print("Beginning serial subsequence counting")
         for read_file_path in fastq_file_list:
             # Read in the data from a fastq file
             read_file =  open(read_file_path, 'r')
@@ -1076,7 +1077,7 @@ if __name__ == "__main__":
             # Create a save file
             save_file = init_save_file(read_file_path, save_folder, save_file_name, \
                 header_file_name)
-            # Serialize the subsequence counting
+            # Parallelize the subsequence counting
             for index in index_arr:
                 seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
                     target_count_list, targetc_count_list = analyze_seq(index)
@@ -1093,6 +1094,7 @@ if __name__ == "__main__":
             pass
     # Parallelized counting
     else:
+        print("Beginning parallelized subsequence counting")
         for read_file_path in fastq_file_list:
             # Read in the data from a fastq file
             read_file =  open(read_file_path, 'r')
