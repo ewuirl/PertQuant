@@ -35,8 +35,8 @@ cwd=$(pwd)
 cd "$cwd/$read_folder"
 
 # Unzip the fastq files
-echo "Unzipping *.gz files"
-gunzip */*.gz
+echo "Unzipping *.fastq.gz files"
+gunzip *"/fastq"*"/"*".fastq.gz"
 
 # Run Nanoplot_hist.sh
 subfolder=$(ls)
