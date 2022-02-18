@@ -337,6 +337,62 @@ def sum_fit_func(count_arr, x_fit, seq_len, min_len, func):
         summed_counts_arr)
     return (summed_counts_arr, fit_params, fit, pcov, perr)
 
+def plot_fit(x_array, counts, fit, perr, params, target, comp, title, name, min_subseq, is_sum, if_save, \
+             plot_folder):
+    plt.rcParams.update({'font.size':12})
+    fig, ax = plt.subplots()
+    if comp:
+        ax.scatter(x_array, counts, label="counts", marker=".", color="k") # I plot complements in black
+    else:
+        ax.scatter(x_array, counts, label="counts", marker=".", color="g") # I plot targets in green
+    ax.plot(x_array, fit, label ="fit: S = {:.0f} $\pm$ {:.0f}\np = {:.2f} $\pm$ {:.1e}".\
+            format(params[0], perr[0], params[1], perr[1]))
+    ax.legend(loc="best")
+    ax.set_xlabel("Length of Subsequence (max 25)")
+    ax.set_ylabel("Number of Matches")
+    ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+    # ax.set_ylim(top=50000)
+    ax.set_xticks(np.arange(5, 26, 5.0))
+    if is_sum:
+        fig.suptitle(f"Fit of {title} {target} Subsequence Counts, min {min_subseq}")
+        save_name = f"/sum_fit_min_{min_subseq}_{name}.png"
+    else:
+        fig.suptitle(f"Summed Fit of {title} {target} Subsequence Counts, min {min_subseq}")
+        save_name = f"/power_fit_min_{min_subseq}_{name}.png"
+    if if_save:
+        plt.savefig(plot_folder+save_name, bbox_inches='tight')
+    else:
+        pass
+
+def plot_target_comp_fit(x_array, counts, fit, perr, params, comp_counts, comp_fit, comp_perr, comp_params,\
+                         target, title, name, min_subseq, is_sum, plot_folder):
+    plt.rcParams.update({'font.size':12})
+    fig, ax = plt.subplots(1,2,figsize=(14,5))
+    ax[0].scatter(x_array, counts, label="counts", marker=".", color="g") # I plot targets in green
+    ax[0].plot(x_array, fit, label ="fit: S = {:.0f} $\pm$ {:.0f}\np = {:.2f} $\pm$ {:.1e}".\
+            format(params[0], perr[0], params[1], perr[1]))
+    ax[1].scatter(x_array, comp_counts, label="complement counts", marker=".", color="k") # I plot complements in black        
+    ax[1].plot(x_array, comp_fit, label ="fit: S = {:.0f} $\pm$ {:.0f}\np = {:.2f} $\pm$ {:.1e}".\
+            format(comp_params[0], comp_perr[0], comp_params[1], comp_perr[1]))
+    ax[0].set_ylabel("Number of Matches")
+    min_ylim = min(ax[0].get_ylim()[0],ax[1].get_ylim()[0])
+    max_ylim = max(ax[0].get_ylim()[1],ax[1].get_ylim()[1])
+    for i in range(2):
+        ax[i].ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+        ax[i].legend(loc="best")
+        ax[i].set_xticks(np.arange(5, 26, 5.0))
+        ax[i].set_ylim((min_ylim,max_ylim))
+    fig.add_subplot(111, frameon=False)
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel("Length of Subsequence (max 25)")
+    if is_sum:
+        fig.suptitle(f"Fit of {title} {target} Subsequence Counts, min {min_subseq}")
+        save_name = f"/sum_fit_min_{min_subseq}_{name}.png"
+    else:
+        fig.suptitle(f"Summed Fit of {title} {target} Subsequence Counts, min {min_subseq}")
+        save_name = f"/power_fit_min_{min_subseq}_{name}.png"
+    plt.savefig(plot_folder+save_name, bbox_inches='tight')
+
 def time_fit_arr(target_bin_array, x_fit, func, is_sum, seq_len, min_len, array_len):
     """
     This function takes an array of time binned subsequence counts. Each row is a 
@@ -1399,3 +1455,44 @@ def calc_mean_subseq_count(count_array, x_array):
 # count_array = np.arange(int((8-1)*(7+1)/2))
 # sub_array = get_subsequence_counts(8,4,2,count_array)
 # print(sub_array)
+
+def calc_residuals(y_true, y_fit):
+    return y_true - y_fit
+
+def calc_MAE(residuals):
+    return np.sum(abs(residuals))/len(residuals)
+
+def calc_normalized_MAE(residuals, y_true):
+    return np.sum(abs(residuals))/(len(residuals)*np.mean(y_true))
+
+def calc_SSE(residuals):
+    return np.sum(np.square(residuals))
+
+def calc_MSE(residuals):
+    return np.sum(np.square(residuals))/len(residuals)
+
+def plot_target_comp_residuals(x_array, residuals, comp_residuals, target, title, name, min_subseq, is_sum, \
+                              plot_folder):
+    plt.rcParams.update({'font.size':12})
+    fig, ax = plt.subplots(1,2,figsize=(14,5))
+    ax[0].scatter(x_array, residuals, marker=".", color="g", label ="target fit residuals")
+    ax[1].scatter(x_array, comp_residuals, label="comp fit residuals", marker=".", color="k") # I plot complements in black        
+    ax[0].set_ylabel("Residuals")
+    min_ylim = min(ax[0].get_ylim()[0],ax[1].get_ylim()[0])
+    max_ylim = max(ax[0].get_ylim()[1],ax[1].get_ylim()[1])
+    for i in range(2):
+        ax[i].ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+        ax[i].legend(loc="best")
+        ax[i].set_xticks(np.arange(5, 26, 5.0))
+        ax[i].set_ylim((min_ylim,max_ylim))
+        ax[i].plot([5,26],np.zeros(2), linestyle='dashed',color='lightgray',zorder=0)
+    fig.add_subplot(111, frameon=False)
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel("Length of Subsequence (max 25)")
+    if is_sum:
+        fig.suptitle(f"{title} {target} Subsequence Counts, min {min_subseq} Fit Residuals")
+        save_name = f"/sum_fit_residuals_min_{min_subseq}_{name}.png"
+    else:
+        fig.suptitle(f"{title} {target} Subsequence Counts, min {min_subseq} Summed Fit Residuals")
+        save_name = f"/power_fit_residuals_min_{min_subseq}_{name}.png"
+    plt.savefig(plot_folder+save_name, bbox_inches='tight')
