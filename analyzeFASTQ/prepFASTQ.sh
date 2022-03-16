@@ -42,4 +42,4 @@ gunzip *"/fastq"*"/"*".fastq.gz"
 subfolder=$(ls)
 cd "$cwd/$read_folder/$subfolder"
 echo "Running NanoPlot_hist"
-NanoPlot_hist.sh --fastq */*.fastq -o "NanoPlot_Summary"
+NanoPlothist.sh --fastq */*.fastq -o "NanoPlot_Summary"

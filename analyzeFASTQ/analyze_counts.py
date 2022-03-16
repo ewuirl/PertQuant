@@ -884,11 +884,11 @@ def plot_binned_artificial_fits(subseq_len, target, comp, x_range, binned_counts
         else:
             pass
 
-def fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len, N, min_len, \
-    fit_save_folder, power_func, summed_power_func, plot=True):
+def bin_fit_artificial_sequences(target, comp, total_counts_arr, start_len, \
+    end_len, N, min_len, fit_save_folder, power_func, summed_power_func, plot=True):
     """
-    fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len, N, min_len, 
-    fit_save_folder, power_func, summed_power_func, plot=True)
+    bin_fit_artificial_sequences(target, comp, total_counts_arr, start_len, 
+    end_len, N, min_len, fit_save_folder, power_func, summed_power_func, plot=True)
 
     This function takes start (smallest) and end lengths for "target subsequences",
     picks out the subsequence count data for these subsequences lengths, fits
@@ -937,7 +937,7 @@ def fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len,
     all_perr_arr_s = np.zeros((rows,2))
     index = 0
     for length in np.arange(start_len, end_len+1):
-        # Make x range arrays
+        # Make x range arrays 
         subseq_counts = get_subsequence_counts(N, length, min_len, total_counts_arr)
         x_arr, x_fit = make_x_fit_arr(length, min_len)
         # Make the non summed fits
@@ -956,7 +956,7 @@ def fit_artificial_sequences(target, comp, total_counts_arr, start_len, end_len,
             index += 1
         print(f"saved the results of {length}")
         # Save the plots
-        if plot:
+        if plot: 
             plot_binned_artificial_fits(length, target, comp, x_arr, subseq_counts, \
                 params_arr, fit_list, perr_arr, fit_save_folder, sum=False, \
                 y_lims=(0,0), is_save=True)

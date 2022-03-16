@@ -5,7 +5,7 @@ import numpy as np
 # Initialize the random number generator
 rand.seed()
 
-def generate_strand(length):
+def generate_strand(length, GC_content=0.5):
 	'''This function takes desired strand length (integer) as an input, randomly 
 	generates a DNA sequence of the desired length, and outputs the sequence
 	as a string.'''
@@ -20,7 +20,11 @@ def generate_strand(length):
 
 	# Randomly choose bases and add them to the sequence
 	for i in range(length):
-		base = rand.choice(['A','T','C','G'])
+		select_GC = rand.random()
+		if select_GC > GC_content:
+			base = rand.choice(['A','T'])
+		else:
+			base = rand.choice(['G','C'])
 		strand = strand + base
 	return strand
 
