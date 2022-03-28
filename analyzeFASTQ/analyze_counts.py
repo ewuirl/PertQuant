@@ -884,7 +884,7 @@ def plot_binned_artificial_fits(subseq_len, target, comp, x_range, binned_counts
         else:
             pass
 
-def bin_fit_artificial_sequences(target, comp, total_counts_arr, start_len, \
+def fit_artificial_sequences(target, comp, total_counts_arr, start_len, \
     end_len, N, min_len, fit_save_folder, power_func, summed_power_func, plot=True):
     """
     bin_fit_artificial_sequences(target, comp, total_counts_arr, start_len, 

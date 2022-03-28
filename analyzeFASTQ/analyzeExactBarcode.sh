@@ -6,7 +6,7 @@
 helpFunction()
 {
     echo ""
-    echo "Usage: analyze_Exact_barcode.sh -r read_folder \
+    echo "Usage: analyzeExact_barcode.sh -r read_folder \
     -s settings_file -t time - p progress"
     echo "Run this in the Exact Barcode directory containing the read folders."
     echo -e "\t-r The name of the read folder. "
