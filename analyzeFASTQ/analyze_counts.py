@@ -386,10 +386,10 @@ def plot_target_comp_fit(x_array, counts, fit, perr, params, comp_counts, comp_f
     plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
     plt.xlabel("Length of Subsequence (max 25)")
     if is_sum:
-        fig.suptitle(f"Fit of {title} {target} Subsequence Counts, min {min_subseq}")
+        fig.suptitle(f"Summed Fit of {title} {target} Subsequence Counts, min {min_subseq}")
         save_name = f"/sum_fit_min_{min_subseq}_{name}.png"
     else:
-        fig.suptitle(f"Summed Fit of {title} {target} Subsequence Counts, min {min_subseq}")
+        fig.suptitle(f"Fit of {title} {target} Subsequence Counts, min {min_subseq}")
         save_name = f"/power_fit_min_{min_subseq}_{name}.png"
     plt.savefig(plot_folder+save_name, bbox_inches='tight')
 
@@ -1490,9 +1490,9 @@ def plot_target_comp_residuals(x_array, residuals, comp_residuals, target, title
     plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
     plt.xlabel("Length of Subsequence (max 25)")
     if is_sum:
-        fig.suptitle(f"{title} {target} Subsequence Counts, min {min_subseq} Fit Residuals")
+        fig.suptitle(f"{title} {target} Subsequence Counts, min {min_subseq} Summed Fit Residuals")
         save_name = f"/sum_fit_residuals_min_{min_subseq}_{name}.png"
     else:
-        fig.suptitle(f"{title} {target} Subsequence Counts, min {min_subseq} Summed Fit Residuals")
+        fig.suptitle(f"{title} {target} Subsequence Counts, min {min_subseq} Fit Residuals")
         save_name = f"/power_fit_residuals_min_{min_subseq}_{name}.png"
     plt.savefig(plot_folder+save_name, bbox_inches='tight')
