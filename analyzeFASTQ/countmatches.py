@@ -106,11 +106,16 @@ def read_settings(settings_path):
                     record = True
                 else:
                     record = False
+            elif line_list[0] == "# stride":
+                if line_list[1] != "":
+                    stride = int(line_list[1])
+                else:
+                    stride = 1
             else:
                 pass
     return(save_path, target_file_path, barcode_file_path, handle_repeat_error, \
         repeat_list, n_repeat, target_sticky, barcode_sticky, sticky_end, min_len, \
-        record)
+        record, stride)
 
 
 def make_dictionary(file_name, sticky_end="TGCA", is_sticky=True):
@@ -153,7 +158,8 @@ def make_dictionary(file_name, sticky_end="TGCA", is_sticky=True):
     # Create empty dictionaries and an empty list
     dictionary = {}
     comp_dictionary = {}
-    seq_comp_list = []
+    seq_list = []
+    comp_list = []
 
     # Determine the length of the sticky sequence
     sticky_len = len(sticky_end)
@@ -196,13 +202,14 @@ def make_dictionary(file_name, sticky_end="TGCA", is_sticky=True):
                     # Add the sequences to the dictionaries
                     dictionary[i] = sequence
                     comp_dictionary[i] = comp
-                    seq_comp_list.append(sequence)
-                    seq_comp_list.append(comp)
+                    seq_list.append(sequence)
+                    comp_list.append(comp)
                     # Increase the sequence count
                 else:
                     raise ValueError('ValueError: Found an empty line in {}.'\
                         .format(file_name) + 
                         '\nMake sure sequence files do not contain empty lines.')
+            seq_comp_list = seq_list + comp_list
             return (dictionary, comp_dictionary, seq_comp_list, ref_len, num_seq)
 
         except (ValueError, AssertionError) as msg:
@@ -569,6 +576,56 @@ def count_matches_seq(target, targetc, sequence, target_len, max_num_subseqs, \
             comp_count_array[array_index+j] = sequence.count(targetc[j:j + n])
     return (count_array, comp_count_array)
 
+def make_target_subseq_array(target_list, target_len, min_len):
+    num_seq = len(target_list)
+    target_subseq_array = np.empty((num_seq, target_len-min_len+1),dtype='<U6')
+    for i in range(num_seq):
+        for j in range(target_len-min_len+1):
+            target_subseq_array[i,j] = target_list[i][j:j+5]
+    return target_subseq_array
+
+def tag_subsequences(read_sequence, target_subseq_array, num_targets, min_len, \
+    stride=1):
+    num_steps = int((len(read_sequence)-min_len)/stride)
+    indices = np.linspace(0,(num_steps)*stride, num_steps+1, dtype=int)
+    tag_array = np.full((2,num_steps+1), np.nan)
+    tag_index = 0
+    for i in indices:
+        identity = np.asarray(target_array == read_sequence[i:i+min_len]).nonzero()
+        if len(identity[0])> 0:
+            tag_array[0,tag_index] = identity[1][0]
+            tag_array[1,tag_index] = identity[0][0]
+        else:
+            pass
+        tag_index += 1
+    return tag_array
+
+def ID_sequences(tag_array, num_targets, min_stretch):
+    clean_tag_array = tag_array[:,~np.all(np.isnan(tag_array), axis=0)].astype(int)
+    # An array to store the counts in
+    sequence_counts = np.zeros(num_targets, dtype=int)
+    previous_tag = clean_tag_array[0,0]
+    previous_sequence = clean_tag_array[1,0]
+    fragment_len = 1
+    for i in range(np.shape(clean_tag_array)[1]-1):
+        current_tag = clean_tag_array[0,i+1]
+        current_sequence = clean_tag_array[1,i+1]
+        if current_sequence == previous_sequence and previous_tag < current_tag:
+            # Add to the fragment
+            fragment_len += 1                
+        else:
+            # Add to the count if the fragment is long enough
+            if fragment_len >= min_stretch:
+                sequence_counts[previous_sequence] += 1
+            else:
+                pass
+            # Reset the fragment length
+            fragment_len = 1
+            # Reset the sequence
+            previous_sequence = current_sequence
+        previous_tag = current_tag
+    return sequence_counts
+    
 def check_repeat_errors(sequence, repeat_list, n_repeat):
     """
     check_repeat_errors(sequence, repeat_list, n_repeat)
@@ -713,7 +770,7 @@ def analyze_seq(index):
         targetc_count_list.append(comp_count_array)
     return(seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, target_count_list, targetc_count_list)
 
-def make_save_folder(fastq_folder, save_path="default"):
+def make_save_folder(fastq_folder, save_path="default", count_method="prob"):
     """
     make_save_folder(fastq_folder, save_path="default")
 
@@ -732,8 +789,10 @@ def make_save_folder(fastq_folder, save_path="default"):
     Output:
         save_folder (str): The path to the save folder.
     """
-    if save_path == "default":
+    if save_path == "default" and count_method == "prob":
         save_folder = f"{fastq_folder}/counts"
+    elif save_path == "default" and count_method == "slide":
+        save_folder = f"{fastq_folder}/slide_counts"
     else:
         save_folder = save_path
 
@@ -743,8 +802,8 @@ def make_save_folder(fastq_folder, save_path="default"):
     return save_folder
 
 def write_header_file(save_folder, save_file_name, target_dict, \
-    handle_repeat_error, barcode_dict={}, min_len=5, repeat_list=["TG", "ATT"], \
-    n_repeat=3, note=""):
+    handle_repeat_error, count_method, barcode_dict={}, min_len=5, \
+    repeat_list=["TG", "ATT"], n_repeat=3, note="", stride=1):
     """
     write_header_file(save_folder, save_file_name, target_dict, 
     handle_repeat_error, barcode_dict={}, min_len=5, repeat_list=["TG", "ATT"], 
@@ -811,6 +870,11 @@ def write_header_file(save_folder, save_file_name, target_dict, \
 
     # Write the analysis settings info
     header_file.write(f'# Analysis Settings \n')
+    header_file.write(f'count_method = {count_method} \n')
+    if count_method == 'slide':
+        header_file.write(f'stride = {stride} \n')
+    else:
+        pass
     header_file.write(f'min_len = {min_len} \n')
     header_file.write(f'handle_repeat_error = {handle_repeat_error} \n')
     if handle_repeat_error:
@@ -840,7 +904,8 @@ def write_header_file(save_folder, save_file_name, target_dict, \
     print(f"Wrote header file: {header_file_name}")
     return header_file_name
 
-def init_save_file(read_file_path, save_folder, save_file_name, header_file_name):
+def init_save_file(read_file_path, save_folder, save_file_name, header_file_name, \
+    count_method = "prob"):
     """
     init_save_file(read_file_path, save_folder, save_file_name, header_file_name)
 
@@ -865,8 +930,13 @@ def init_save_file(read_file_path, save_folder, save_file_name, header_file_name
     read_file_list = read_file_path.split("/")
     read_file_name = read_file_list[-1].replace(".fastq","")
 
+    if count_method == "prob":
+        extension = "counts"
+    else:
+        extension = "slide_counts"
+
     # Open the save file
-    save_file = open(f"{save_folder}/{read_file_name}_{save_file_name}_counts.dat", "w")
+    save_file = open(f"{save_folder}/{read_file_name}_{save_file_name}_{extension}.dat", "w")
 
     # Write where the analysis settings are saved
     save_file.write(f"# Data info and analysis settings in {header_file_name}\n")
@@ -898,15 +968,46 @@ def write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, \
     save_file.write(f"{seq_ID}\n")
     save_file.write(f"{avg_Q_score} {seq_len} {barcode_ID} {has_repeat_error}\n")
     for i in range(len(target_count_list)):
-        # Write target subsequence counts to save ffile
+        # Write target subsequence counts to save file
         target_array = target_count_list[i]
         for count in target_array:
             save_file.write(f"{int(count)} ")
         save_file.write("\n")
 
-        # Write target complement subsequence counts to save ffile
+        # Write target complement subsequence counts to save file
         targetc_array = targetc_count_list[i]
         for count in targetc_array:
+            save_file.write(f"{int(count)} ")
+        save_file.write("\n")
+
+def write_slide_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, \
+    has_repeat_error, sequence_count_list):
+    """
+    write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, 
+    has_repeat_error, target_count_list)
+
+    This function writes count match data to a save file. Each fastq file gets 
+    its own save file.
+
+    Arguments:
+        save_file (file):
+        seq_ID (int):
+        seq_len (int):
+        avg_Q_score (float):
+        barcode_ID (int):
+        has_repeat_error (int):
+        target_count_list (list):
+        targetc_count_list (list):
+    
+    Output:
+        None. Writes data to a save file.
+    """
+    save_file.write(f"{seq_ID}\n")
+    save_file.write(f"{avg_Q_score} {seq_len} {barcode_ID} {has_repeat_error}\n")
+    for i in range(len(sequence_count_list)):
+        # Write target subsequence counts to save file
+        sequence_array = sequence_count_list[i]
+        for count in sequence_array:
             save_file.write(f"{int(count)} ")
         save_file.write("\n")
 
@@ -946,6 +1047,8 @@ if __name__ == "__main__":
         save file names that results are saved to.")
     parser.add_argument("--settings", type=str, help="The path to the file \
         containing count analysis settings.")
+    parser.add_argument("--method", type=str, help="The count method to use. \
+        Available options are 'prob' and 'slide'. Defaults to prob.")
     parser.add_argument("--barcoded", type=bool, help="If True, the program will \
         try to identify the barcode ID of each sequence.")
     parser.add_argument("--serial", type=str, help="If True, counts matches serially \
@@ -982,6 +1085,10 @@ if __name__ == "__main__":
                 settings_path = str(input(f"Please enter the path to the settings file.\n"))
             else:
                 settings_path = settings_path_list[settings_path_index]
+    if args.method:
+        count_method = args.method
+    else:
+        count_method = "prob"
     if args.serial:
         serial = eval(args.serial)
     else:
@@ -1002,7 +1109,7 @@ if __name__ == "__main__":
     # Read in the settings file
     save_path, target_file_path, barcode_file_path, handle_repeat_error, \
     repeat_list, n_repeat, target_sticky, barcode_sticky, sticky_end, min_len, \
-    record = read_settings(settings_path)
+    record, stride = read_settings(settings_path)
 
     # Make the target dictionary
     target_dict, target_comp_dict, target_list, target_len, target_num_seq = \
@@ -1040,7 +1147,7 @@ if __name__ == "__main__":
         print(f"Using default or provided minimum subsequence length: {min_len}")
 
     # Create the save folder
-    save_folder = make_save_folder(fastq_folder, save_path=save_path)
+    save_folder = make_save_folder(fastq_folder, save_path=save_path, method=count_method)
 
     # Record any nonunique subsequences
     if record:

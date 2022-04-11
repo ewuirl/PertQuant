@@ -44,6 +44,7 @@ def get_count_settings(count_settings_path):
         n_targets = int(line_list[3])
         target_list = []
         target_lengths = []
+        settings_dict = {}
         for i in range(n_targets):
             target = lines[i+1].rstrip("\n").split()[1]
             target_list.append(target)
@@ -54,31 +55,29 @@ def get_count_settings(count_settings_path):
         line_list = line.split()
         n_barcodes = int(line_list[3])
 
-        # Get min_len
-        line = lines[n_targets+3+n_barcodes].rstrip("\n")
-        line_list = line.split()
-        min_len = int(line_list[2])
+        line_index = n_targets+3+n_barcodes
+        for line in lines[line_index:]:
+            line = line.rstrip("\n")
+            line_list = line.split(" = ")
+            if line_list[0] == "count_method":
+                settings_dict["count_method"] = line_list[1]
+            elif line_list[0] == "stride":
+                settings_dict["stride"] = int(line_list[1])
+            elif line_list[0] == "min_len":
+                settings_dict["min_len"] = int(line_list[1])
+            elif line_list[0] == "handle_repeat_error":
+                settings_dict["handle_repeat_error"] = bool(line_list[1])
+            elif line_list[0] == "repeat_list": 
+                if line_list[1] == "[]":
+                    settings_dict["repeat_list"] = []
+                else:
+                    settings_dict["repeat_list"] = line_list[1].split()
+            elif line_list[0] == "n_repeat":
+                settings_dict["n_repeat"] = int(line_list[2])
+            else:
+                pass
 
-        # Get handle_repeat_error
-        line = lines[n_targets+4+n_barcodes].rstrip("\n")
-        line_list = line.split()
-        handle_repeat_error = bool(line_list[2])
-
-        # Get repeat_list
-        line = lines[n_targets+5+n_barcodes].rstrip("\n")
-        line_list = line.split()
-        if line_list[2] == "[]":
-            repeat_list = []
-        else:
-            repeat_list = line_list[2:]
-
-        # Get n_repeat
-        line = lines[n_targets+6+n_barcodes].rstrip("\n")
-        line_list = line.split()
-        n_repeat = int(line_list[2])
-
-    return (n_targets, target_list, target_lengths, n_barcodes, min_len, \
-        handle_repeat_error, repeat_list, n_repeat)
+    return (n_targets, target_list, target_lengths, n_barcodes, settings_dict)
 
 def get_seq_info(seq_ID, features):
     """
@@ -1099,10 +1098,20 @@ if __name__ == "__main__":
     dat_file_list = [str(file) for file in dat_files]
 
     # Get the number of targets
-    n_targets, target_list, target_lengths, n_barcodes, min_len, \
-    handle_repeat_error, repeat_list, n_repeat = \
+    n_targets, target_list, target_lengths, n_barcodes, settings_dict = \
     get_count_settings(count_settings_path)
 
+    # Unpack the count settings
+    min_len = settings_dict["min_len"]
+    handle_repeat_error = settings_dict["handle_repeat_error"]
+    repeat_list = settings_dict["repeat_list"]
+    n_repeat = settings_dict["n_repeat"]
+    
+    if "count_method" in settings_dict:
+        count_method = settings_dict["count_method"]
+        stride = settings_dict["stride"]
+    else:
+        pass
     
     # Get avg Q scores for histograms
     if Qhist or Phist:
