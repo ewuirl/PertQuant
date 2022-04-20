@@ -96,7 +96,7 @@ def min_max_normalize(strand_df, strand_stats):
 	return (strand_df - strand_stats['min']) / \
 	(strand_stats['max'] - strand_stats['min'])
 
-def prep_data(Am_array, Ci_all_array, train):
+def prep_data(Am_array, Ci_all_array, train, random_state=0):
 	'''This function takes in Am_array and Ci_all_array and train, a decimal 
 	number between [0,1]. Am_array and Ci_all_array are arrays of data read in 
 	using the function read_eq_data_file from gen_eq_data.py. train is the 
@@ -113,7 +113,7 @@ def prep_data(Am_array, Ci_all_array, train):
 	Ci_df = convert_np2df(Ci_all_array, 'C')
 
 	# Pick out test and training Ci data
-	train_Am_df_rand = Am_df.sample(frac=train,random_state=0)
+	train_Am_df_rand = Am_df.sample(frac=train,random_state=random_state)
 	test_Am_df = Am_df.drop(train_Am_df_rand.index)
 	train_Am_df = Am_df.drop(test_Am_df.index)
 
