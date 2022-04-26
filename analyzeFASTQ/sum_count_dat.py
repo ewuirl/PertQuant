@@ -63,6 +63,8 @@ def get_count_settings(count_settings_path):
                 settings_dict["count_method"] = line_list[1]
             elif line_list[0] == "stride":
                 settings_dict["stride"] = int(line_list[1])
+            elif line_list[0] == "min_stretch":
+                settings_dict["min_stretch"] = int(line_list[1])
             elif line_list[0] == "min_len":
                 settings_dict["min_len"] = int(line_list[1])
             elif line_list[0] == "handle_repeat_error":
@@ -73,7 +75,7 @@ def get_count_settings(count_settings_path):
                 else:
                     settings_dict["repeat_list"] = line_list[1].split()
             elif line_list[0] == "n_repeat":
-                settings_dict["n_repeat"] = int(line_list[2])
+                settings_dict["n_repeat"] = int(line_list[1])
             else:
                 pass
 
@@ -916,6 +918,7 @@ def read_dat_file_all_parallel(dat_file_list, target_lengths):
             complement subsequence counts. Results of each file are also summed. 
             Each target gets its own array. 
     """
+    global n_targets
     total_target_sum_array_list = []
     total_targetc_sum_array_list = []
     for i in range(n_targets):
@@ -1110,6 +1113,7 @@ if __name__ == "__main__":
     if "count_method" in settings_dict:
         count_method = settings_dict["count_method"]
         stride = settings_dict["stride"]
+        min_stretch = settings_dict["min_stretch"]
     else:
         pass
     

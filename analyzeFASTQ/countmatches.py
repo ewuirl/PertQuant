@@ -40,6 +40,10 @@ def read_settings(settings_path):
             min_len (int): 
             record (bool): 
     """
+    # Optional settings, set the default value
+    stride = 1
+    min_stretch = 5
+
     with open(settings_path, 'r') as file:
         lines = file.readlines()
         for line in lines:
@@ -110,12 +114,17 @@ def read_settings(settings_path):
                 if line_list[1] != "":
                     stride = int(line_list[1])
                 else:
-                    stride = 1
+                    pass
+            elif line_list[0] == "# min_stretch":
+                if line_list[1] != "":
+                    min_stretch = int(line_list[1])
+                else:
+                    pass
             else:
                 pass
     return(save_path, target_file_path, barcode_file_path, handle_repeat_error, \
         repeat_list, n_repeat, target_sticky, barcode_sticky, sticky_end, min_len, \
-        record, stride)
+        record, stride, min_stretch)
 
 
 def make_dictionary(file_name, sticky_end="TGCA", is_sticky=True):
@@ -158,8 +167,9 @@ def make_dictionary(file_name, sticky_end="TGCA", is_sticky=True):
     # Create empty dictionaries and an empty list
     dictionary = {}
     comp_dictionary = {}
-    seq_list = []
-    comp_list = []
+    seq_comp_list = []
+    # seq_list = []
+    # comp_list = []
 
     # Determine the length of the sticky sequence
     sticky_len = len(sticky_end)
@@ -202,14 +212,16 @@ def make_dictionary(file_name, sticky_end="TGCA", is_sticky=True):
                     # Add the sequences to the dictionaries
                     dictionary[i] = sequence
                     comp_dictionary[i] = comp
-                    seq_list.append(sequence)
-                    comp_list.append(comp)
+                    seq_comp_list.append(sequence)
+                    seq_comp_list.append(comp)
+                    # seq_list.append(sequence)
+                    # comp_list.append(comp)
                     # Increase the sequence count
                 else:
                     raise ValueError('ValueError: Found an empty line in {}.'\
                         .format(file_name) + 
                         '\nMake sure sequence files do not contain empty lines.')
-            seq_comp_list = seq_list + comp_list
+            # seq_comp_list = seq_list + comp_list
             return (dictionary, comp_dictionary, seq_comp_list, ref_len, num_seq)
 
         except (ValueError, AssertionError) as msg:
@@ -524,10 +536,10 @@ def get_barcode_ID(sequence, index, lines, barcode_list):
     pass
 
 def count_matches_seq(target, targetc, sequence, target_len, max_num_subseqs, \
-    array_len, min_len, lines):
+    array_len, min_len):
     """
     count_matches(target, targetc, sequence, target_len, max_num_subseqs, \
-    array_len, min_len, lines)
+    array_len, min_len)
 
     This function counts the subsequence instances of a target sequence and its
     complement in a provided sequence, and returns these counts in separate 
@@ -544,7 +556,6 @@ def count_matches_seq(target, targetc, sequence, target_len, max_num_subseqs, \
         array_len (int): the total number of subsequences that will be 
             checked (based on min_len and target_len)
         min_len (int): the minimum subsequence length that will be checked
-        lines (list): a list of the lines of a FASTQ file
 
     Outputs:
         count_array (numpy arr): A numpy array containing the subsequence counts
@@ -591,7 +602,7 @@ def tag_subsequences(read_sequence, target_subseq_array, num_targets, min_len, \
     tag_array = np.full((2,num_steps+1), np.nan)
     tag_index = 0
     for i in indices:
-        identity = np.asarray(target_array == read_sequence[i:i+min_len]).nonzero()
+        identity = np.asarray(target_subseq_array == read_sequence[i:i+min_len]).nonzero()
         if len(identity[0])> 0:
             tag_array[0,tag_index] = identity[1][0]
             tag_array[1,tag_index] = identity[0][0]
@@ -603,29 +614,32 @@ def tag_subsequences(read_sequence, target_subseq_array, num_targets, min_len, \
 def ID_sequences(tag_array, num_targets, min_stretch):
     clean_tag_array = tag_array[:,~np.all(np.isnan(tag_array), axis=0)].astype(int)
     # An array to store the counts in
-    sequence_counts = np.zeros(num_targets, dtype=int)
-    previous_tag = clean_tag_array[0,0]
-    previous_sequence = clean_tag_array[1,0]
-    fragment_len = 1
-    for i in range(np.shape(clean_tag_array)[1]-1):
-        current_tag = clean_tag_array[0,i+1]
-        current_sequence = clean_tag_array[1,i+1]
-        if current_sequence == previous_sequence and previous_tag < current_tag:
-            # Add to the fragment
-            fragment_len += 1                
-        else:
-            # Add to the count if the fragment is long enough
-            if fragment_len >= min_stretch:
-                sequence_counts[previous_sequence] += 1
+    sequence_counts_arr = np.zeros(num_targets, dtype=int)
+    if clean_tag_array.shape[1] >= min_stretch:
+        previous_tag = clean_tag_array[0,0]
+        previous_sequence = clean_tag_array[1,0]
+        fragment_len = 1
+        for i in range(np.shape(clean_tag_array)[1]-1):
+            current_tag = clean_tag_array[0,i+1]
+            current_sequence = clean_tag_array[1,i+1]
+            if current_sequence == previous_sequence and previous_tag < current_tag:
+                # Add to the fragment
+                fragment_len += 1                
             else:
-                pass
-            # Reset the fragment length
-            fragment_len = 1
-            # Reset the sequence
-            previous_sequence = current_sequence
-        previous_tag = current_tag
-    return sequence_counts
-    
+                # Add to the count if the fragment is long enough
+                if fragment_len >= min_stretch:
+                    sequence_counts_arr[previous_sequence] += 1
+                else:
+                    pass
+                # Reset the fragment length
+                fragment_len = 1
+                # Reset the sequence
+                previous_sequence = current_sequence
+            previous_tag = current_tag
+    else:
+        pass
+    return sequence_counts_arr
+
 def check_repeat_errors(sequence, repeat_list, n_repeat):
     """
     check_repeat_errors(sequence, repeat_list, n_repeat)
@@ -650,7 +664,7 @@ def check_repeat_errors(sequence, repeat_list, n_repeat):
             pass
     return has_error
 
-def analyze_seq(index):
+def get_seq_info(index):
     """
     analyze_seq(index)
 
@@ -732,11 +746,6 @@ def analyze_seq(index):
     else:
         barcode_ID = -1
 
-    # Make lists to store the count arrays in
-    num_targets = int(len(target_list)/2)
-    target_count_list = []
-    targetc_count_list = []
-
     # If we want to handle repeat errors, check sequences for repeat errors
     if handle_repeat_error:
         # print(f'checking for repeat errors: {index}')
@@ -752,6 +761,16 @@ def analyze_seq(index):
     else:
         has_repeat_error = -1
 
+    
+    return(seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, sequence)
+
+def count_seq_prob(sequence):
+    global target_list
+    global min_len
+    # Make lists to store the count arrays in
+    num_targets = int(len(target_list)/2)
+    target_count_list = []
+    targetc_count_list = []
     # Count the target subsequences (loop through the targets)
     for i in range(num_targets):
         # Get the target and comp sequence to search for
@@ -764,11 +783,154 @@ def analyze_seq(index):
         array_len = int(max_num_subseqs * (max_num_subseqs+1)/2)
         # Count the subsequences and check for repeat errors
         count_array, comp_count_array = count_matches_seq(target, targetc, \
-            sequence, target_len, max_num_subseqs, array_len, min_len, lines)
+            sequence, target_len, max_num_subseqs, array_len, min_len)
         # Store the counts
         target_count_list.append(count_array)
         targetc_count_list.append(comp_count_array)
-    return(seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, target_count_list, targetc_count_list)
+    return(target_count_list, targetc_count_list)
+
+def count_seq_slide(sequence):
+    global target_subseq_array
+    global num_target_comp
+    global min_len
+    global stride
+    global min_stretch
+    tag_array = tag_subsequences(sequence, target_subseq_array, num_target_comp, min_len, \
+    stride=stride)
+    sequence_counts_arr = ID_sequences(tag_array, num_target_comp, min_stretch)
+    return sequence_counts_arr
+
+def analyze_seq_prob(index):
+    seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, sequence = get_seq_info(index)
+    target_count_list, targetc_count_list = count_seq_prob(sequence)
+    return(seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
+        target_count_list, targetc_count_list)
+
+def analyze_seq_slide(index):
+    seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, sequence = get_seq_info(index)
+    sequence_counts_arr = count_seq_slide(sequence)
+    return(seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
+        sequence_counts_arr)
+
+# def analyze_seq(index):
+#     """
+#     analyze_seq(index)
+
+#     Takes in an index of the line containing a sequence ID of a sequence to be
+#     analyzed. It uses this to identify the sequence ID, barcode ID, and average 
+#     Q score of the associated sequence. It also counts the number of 
+#     target/complementary subsequences in the sequence. It only takes in one 
+#     argument in order to be easily parallelized. It also relies on a set of 
+#     global arguments.
+
+#     Arguments:
+#         index (int): The index of the line containing the sequence ID data.
+
+#     Global Arguments;
+#         lines (list): A list of lines read in from a FASTQ file.
+#         min_len (int): the minimum subsequence length that will be checked
+#         target_list (list):
+#         barcode_list (list): A list of barcode sequences and their complements. 
+#             If barcode_list is an empty list, the function will not try to 
+#             dentify the barcode ID of the sequence, and the barcode ID will be 
+#             set to -1. If it is not empty, the function will try to identify 
+#             that barcode ID, and dictionaries of barcode and complementary 
+#             sequences will be required.
+#         handle_repeat_error (bool): If True, the function will handle repeat 
+#             errors. If False, all sequences will be analyzed in the same way.
+
+#         Optional:
+#             Barcode ID - Required if barcode_list is NOT an empty list.
+#             barcode_dict (dict): A dictionary with barcode ID as keys and
+#                 barcode sequences as values. 
+#             barcode_comp_dict (dict): A dictionary with barcode ID as keys and
+#                 barcode complementary sequences as values. 
+
+#             Handling Repeat Errors - Required if handle_repeat_error is True.
+#             read_file_name (str): The name of the FASTQ file being analyzed.
+#             repeat_list (list): A list of strings representing the repeat 
+#                 sequences to check for.
+#             n_repeat (int) the threshold number of subsequent repeats of the 
+#                 repeat sequences for a sequence to be considered to have a 
+#                 repeat error.
+
+#     Outputs:
+#         seq_ID (str): The Nanopore sequence ID (contains information about the
+#             read).
+#         avg_Q_score (float): The base-averaged per base Q score for the read.
+#         seq_len (int): The length of the sequence.
+#         barcode_ID (int): Returns -1 if a barcode ID was not found. Returns the
+#             barcode ID if it was found. Defaults to -1 if the barcode dict
+#             is empty.
+#         has_repeat_error (int): If handle_repeat_error is False, returns -1. If
+#             handle_repeat_error is True, returns 1 if a repeat error was found, 
+#             0 if not.
+#         target_count_list (list): A list containing the subsequence count arrays
+#             for all of the targets. 
+#         target_comp_list (list): A list containing the subsequence count arrays 
+#             for all of the target complements. 
+#     """
+#     global lines 
+#     global min_len
+#     global target_list 
+#     global barcode_dict
+#     global handle_repeat_error
+#     # Read in the sequence ID
+#     seq_ID = lines[index].rstrip("\n")
+
+#     # Read in the sequence
+#     sequence = lines[index+1].rstrip("\n")
+#     seq_len = len(sequence)
+
+#     # Get the average Q_score
+#     avg_Q_score = get_avg_Q_score(index+3, seq_len, lines)
+
+#     # Find the barcode ID of the sequence 
+#     if len(barcode_dict) > 0:
+#         global barcode_comp_dict
+#         global barcode_list
+#         barcode_ID = get_barcode_ID(sequence, index, lines, barcode_list)
+#     # Otherwise set it to -1 (no barcode)
+#     else:
+#         barcode_ID = -1
+
+#     # Make lists to store the count arrays in
+#     num_targets = int(len(target_list)/2)
+#     target_count_list = []
+#     targetc_count_list = []
+
+#     # If we want to handle repeat errors, check sequences for repeat errors
+#     if handle_repeat_error:
+#         # print(f'checking for repeat errors: {index}')
+#         global read_file_name
+#         global repeat_list
+#         global n_repeat
+#         # Check for repeat error 
+#         has_repeat_error = check_repeat_errors(sequence, repeat_list, n_repeat)
+#         if has_repeat_error == 1:
+#             print(f'file: {read_file_name[-9:]}, index: {index}, seq_len: {len(sequence)}')
+#         else:
+#             pass
+#     else:
+#         has_repeat_error = -1
+
+#     # Count the target subsequences (loop through the targets)
+#     for i in range(num_targets):
+#         # Get the target and comp sequence to search for
+#         target = target_list[int(2*i)]
+#         targetc = target_list[int(2*i+1)]
+#         target_len = len(target)
+#         # Figure out the maximum number of subsequences possible
+#         max_num_subseqs = target_len - min_len + 1
+#         # Calculate the count array length
+#         array_len = int(max_num_subseqs * (max_num_subseqs+1)/2)
+#         # Count the subsequences and check for repeat errors
+#         count_array, comp_count_array = count_matches_seq(target, targetc, \
+#             sequence, target_len, max_num_subseqs, array_len, min_len, lines)
+#         # Store the counts
+#         target_count_list.append(count_array)
+#         targetc_count_list.append(comp_count_array)
+#     return(seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, target_count_list, targetc_count_list)
 
 def make_save_folder(fastq_folder, save_path="default", count_method="prob"):
     """
@@ -803,7 +965,7 @@ def make_save_folder(fastq_folder, save_path="default", count_method="prob"):
 
 def write_header_file(save_folder, save_file_name, target_dict, \
     handle_repeat_error, count_method, barcode_dict={}, min_len=5, \
-    repeat_list=["TG", "ATT"], n_repeat=3, note="", stride=1):
+    repeat_list=["TG", "ATT"], n_repeat=3, note="", stride=1, min_stretch=5):
     """
     write_header_file(save_folder, save_file_name, target_dict, 
     handle_repeat_error, barcode_dict={}, min_len=5, repeat_list=["TG", "ATT"], 
@@ -873,6 +1035,7 @@ def write_header_file(save_folder, save_file_name, target_dict, \
     header_file.write(f'count_method = {count_method} \n')
     if count_method == 'slide':
         header_file.write(f'stride = {stride} \n')
+        header_file.write(f'min_stretch = {min_stretch} \n')
     else:
         pass
     header_file.write(f'min_len = {min_len} \n')
@@ -927,6 +1090,7 @@ def init_save_file(read_file_path, save_folder, save_file_name, header_file_name
         save_file (file): the save file that match count data for the read file
             will be saved to
     """
+    global target_num_seq
     read_file_list = read_file_path.split("/")
     read_file_name = read_file_list[-1].replace(".fastq","")
 
@@ -938,12 +1102,17 @@ def init_save_file(read_file_path, save_folder, save_file_name, header_file_name
     # Open the save file
     save_file = open(f"{save_folder}/{read_file_name}_{save_file_name}_{extension}.dat", "w")
 
-    # Write where the analysis settings are saved
-    save_file.write(f"# Data info and analysis settings in {header_file_name}\n")
-
+    if count_method == "prob":
+        # Write where the analysis settings are saved
+        save_file.write(f"# Data info and analysis settings in {header_file_name}\n")
+    else:
+        save_file.write(f"seq_ID\tread\tchannel\tread_time\tavg_q_score\tseq_len\tbarcode_ID\thas_repeat_error")
+        for i in range(target_num_seq):
+            save_file.write(f"\t{i}\t{i}C")
+        save_file.write(f"\n")
     return save_file
 
-def write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, \
+def write_dat_file_prob(save_file, seq_ID, avg_Q_score, seq_len, barcode_ID, \
     has_repeat_error, target_count_list, targetc_count_list):
     """
     write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, 
@@ -980,8 +1149,8 @@ def write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, \
             save_file.write(f"{int(count)} ")
         save_file.write("\n")
 
-def write_slide_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, \
-    has_repeat_error, sequence_count_list):
+def write_dat_file_slide(save_file, seq_ID, avg_Q_score, seq_len, barcode_ID, \
+    has_repeat_error, sequence_counts_arr):
     """
     write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, 
     has_repeat_error, target_count_list)
@@ -1002,14 +1171,15 @@ def write_slide_dat_file(save_file, seq_ID, seq_len, avg_Q_score, barcode_ID, \
     Output:
         None. Writes data to a save file.
     """
-    save_file.write(f"{seq_ID}\n")
-    save_file.write(f"{avg_Q_score} {seq_len} {barcode_ID} {has_repeat_error}\n")
-    for i in range(len(sequence_count_list)):
-        # Write target subsequence counts to save file
-        sequence_array = sequence_count_list[i]
-        for count in sequence_array:
-            save_file.write(f"{int(count)} ")
-        save_file.write("\n")
+    seq_ID_list = seq_ID.split()
+    short_seq_id = seq_ID_list[0]
+    read = seq_ID_list[2].split('=')[1]
+    channel = seq_ID_list[3].split('=')[1]
+    read_time_str = seq_ID_list[4].split('=')[1]
+    save_file.write(f"{short_seq_id} {read}\t{channel}\t{read_time_str}\t{avg_Q_score}\t{seq_len}\t{barcode_ID}\t{has_repeat_error}")
+    for count in sequence_counts_arr:
+        save_file.write(f"\t{int(count)}")
+    save_file.write("\n")
 
 # def analyze_fastq_file(read_file_path, save_folder, save_file_name, header_file_name):
 #     """ """
@@ -1089,6 +1259,7 @@ if __name__ == "__main__":
         count_method = args.method
     else:
         count_method = "prob"
+
     if args.serial:
         serial = eval(args.serial)
     else:
@@ -1109,12 +1280,24 @@ if __name__ == "__main__":
     # Read in the settings file
     save_path, target_file_path, barcode_file_path, handle_repeat_error, \
     repeat_list, n_repeat, target_sticky, barcode_sticky, sticky_end, min_len, \
-    record, stride = read_settings(settings_path)
+    record, stride, min_stretch = read_settings(settings_path)
 
     # Make the target dictionary
     target_dict, target_comp_dict, target_list, target_len, target_num_seq = \
     make_dictionary(target_file_path, sticky_end=sticky_end, \
         is_sticky=target_sticky)
+    # Get the number of target and comp sequences
+    num_target_comp = 2*target_num_seq
+
+    # Set the count method
+    if count_method=="prob":
+        analyze_seq = analyze_seq_prob
+        write_dat_file = write_dat_file_prob
+
+    else:
+        analyze_seq = analyze_seq_slide
+        write_dat_file = write_dat_file_slide
+        target_subseq_array = make_target_subseq_array(target_list, target_len, min_len)
 
     # Read in the barcode file if the data is barcoded and make a dictionary
     if args.barcoded:
@@ -1147,7 +1330,7 @@ if __name__ == "__main__":
         print(f"Using default or provided minimum subsequence length: {min_len}")
 
     # Create the save folder
-    save_folder = make_save_folder(fastq_folder, save_path=save_path, method=count_method)
+    save_folder = make_save_folder(fastq_folder, save_path=save_path, count_method=count_method)
 
     # Record any nonunique subsequences
     if record:
@@ -1158,8 +1341,9 @@ if __name__ == "__main__":
 
     # Create header file
     header_file_name = write_header_file(save_folder, save_file_name, target_dict, \
-    handle_repeat_error, barcode_dict=barcode_dict, min_len=min_len, \
-    repeat_list=repeat_list, n_repeat=n_repeat, note="")
+    handle_repeat_error, count_method, barcode_dict=barcode_dict, min_len=min_len, \
+    repeat_list=repeat_list, n_repeat=n_repeat, note="", stride=stride, \
+    min_stretch=min_stretch)
 
     # Create list of fastq files to analyze
     fastq_files = Path(fastq_folder).rglob("*.fastq")
@@ -1183,15 +1367,18 @@ if __name__ == "__main__":
             index_arr = np.arange(0,len(lines),4)
             # Create a save file
             save_file = init_save_file(read_file_path, save_folder, save_file_name, \
-                header_file_name)
+                header_file_name, count_method=count_method)
             # Parallelize the subsequence counting
             for index in index_arr:
-                seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
-                    target_count_list, targetc_count_list = analyze_seq(index)
+                # seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
+                #     target_count_list, targetc_count_list = analyze_seq(index)
+                # # Write the results to the save file
+                # write_dat_file(save_file, seq_ID, avg_Q_score, seq_len, \
+                #     barcode_ID, has_repeat_error, target_count_list, \
+                #     targetc_count_list)
+                result = analyze_seq(index)
                 # Write the results to the save file
-                write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, \
-                    barcode_ID, has_repeat_error, target_count_list, \
-                    targetc_count_list)
+                write_dat_file(save_file, *result)
             read_file.close()
             save_file.close()
         if prog:
@@ -1210,18 +1397,21 @@ if __name__ == "__main__":
             index_arr = np.arange(0,len(lines),4)
             # Create a save file
             save_file = init_save_file(read_file_path, save_folder, save_file_name, \
-                header_file_name)
+                header_file_name, count_method=count_method)
             # Parallelize the subsequence counting
             with concurrent.futures.ProcessPoolExecutor() as executor:
                 results = executor.map(analyze_seq, index_arr)
                 for result in results:
                     # Unpack the subsequence counts
-                    seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
-                    target_count_list, targetc_count_list = result
+                    # seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
+                    # target_count_list, targetc_count_list = result
                     # Write the results to the save file
-                    write_dat_file(save_file, seq_ID, seq_len, avg_Q_score, \
-                        barcode_ID, has_repeat_error, target_count_list, \
-                        targetc_count_list)
+                    # write_dat_file(save_file, seq_ID, avg_Q_score, seq_len, \
+                    #     barcode_ID, has_repeat_error, target_count_list, \
+                    #     targetc_count_list)
+
+                    # Write the results to the save file
+                    write_dat_file(save_file, *result)
             read_file.close()
             save_file.close()
             if prog:
