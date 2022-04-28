@@ -1,0 +1,4 @@
+For the grouped split, I put all samples of a certain type only in the test split.
+For example, for C1 high, all samples with C1 in the top 20th percentile are placed in the test split.
+
+I used the random split CSV maker with different random seeds.
