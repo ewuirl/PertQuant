@@ -1176,7 +1176,7 @@ def write_dat_file_slide(save_file, seq_ID, avg_Q_score, seq_len, barcode_ID, \
     read = seq_ID_list[2].split('=')[1]
     channel = seq_ID_list[3].split('=')[1]
     read_time_str = seq_ID_list[4].split('=')[1]
-    save_file.write(f"{short_seq_id} {read}\t{channel}\t{read_time_str}\t{avg_Q_score}\t{seq_len}\t{barcode_ID}\t{has_repeat_error}")
+    save_file.write(f"{short_seq_id}\t{read}\t{channel}\t{read_time_str}\t{avg_Q_score}\t{seq_len}\t{barcode_ID}\t{has_repeat_error}")
     for count in sequence_counts_arr:
         save_file.write(f"\t{int(count)}")
     save_file.write("\n")
