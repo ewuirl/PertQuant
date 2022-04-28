@@ -1229,6 +1229,10 @@ if __name__ == "__main__":
     parser.add_argument("--beep", type=int, help="Plays a sound using beepy when \
         the program finishes running. To pick a sound, provide an integer from \
         1-7. To not play a sound, set to 0. Defaults to 1.")
+    parser.add_argument("--min_stretch", type=int, help="Overrides min_stretch in \
+        settings file.")
+    parser.add_argument("--save_path", type=str, help="Overrides save_path in \
+        settings file.")
     args = parser.parse_args()
 
     # Parse the arguments
@@ -1281,6 +1285,16 @@ if __name__ == "__main__":
     save_path, target_file_path, barcode_file_path, handle_repeat_error, \
     repeat_list, n_repeat, target_sticky, barcode_sticky, sticky_end, min_len, \
     record, stride, min_stretch = read_settings(settings_path)
+
+    if args.min_stretch:
+        min_stretch = int(args.min_stretch)
+    else:
+        pass
+
+    if args.save_path:
+        save_path = f"{fastq_folder}/{args.save_path}"
+    else:
+        pass
 
     # Make the target dictionary
     target_dict, target_comp_dict, target_list, target_len, target_num_seq = \
@@ -1344,6 +1358,8 @@ if __name__ == "__main__":
     handle_repeat_error, count_method, barcode_dict=barcode_dict, min_len=min_len, \
     repeat_list=repeat_list, n_repeat=n_repeat, note="", stride=stride, \
     min_stretch=min_stretch)
+
+
 
     # Create list of fastq files to analyze
     fastq_files = Path(fastq_folder).rglob("*.fastq")
