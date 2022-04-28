@@ -84,7 +84,7 @@ def read_slide_dat_file_all_parallel(dat_file_list, n_targets):
             complement subsequence counts. Results of each file are also summed. 
             Each target gets its own array. 
     """
-    total_target_comp_sum_array = np.zeros(int(2*n_targets))
+    total_target_comp_sum_array = np.zeros(int(2*n_targets), dtype=int)
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
         results = executor.map(read_slide_dat_file_all, dat_file_list)
@@ -115,6 +115,31 @@ def write_all_summed_counts_array(save_file_path, summed_counts_array):
         for i in range(len(summed_counts_array)):
             save_file.write(f"{summed_counts_array[i]}\t")
 
+def write_all_summed_counts_array_pf(save_file_path, summed_counts_arrays):
+    """
+    write_all_summed_counts_array(save_file_path, summed_counts_array)
+
+    This function writes the data from a summed count array (1D) into a file. 
+    
+    Arguments:
+        save_file_path (str): The path to the file to save the data to.
+        summed_counts_array (arr): A 1D array containing summed subsequence count
+            data.
+
+    Returns:
+        Nothing. Writes the data in the provided array to the file specified by
+            the path.
+    """
+    with open(save_file_path, 'w') as save_file:
+        for i in range(int(len(summed_counts_arrays[0])/2)):
+            save_file.write(f"{i}\t{i}C\t")
+        save_file.write(f"\n")
+        for i in range(len(summed_counts_arrays)):
+            for j in range(len(summed_counts_arrays[i])):
+                save_file.write(f"{summed_counts_arrays[i][j]}\t")
+            if i < len(summed_counts_arrays) - 1:
+                save_file.write("\n")
+
 if __name__ == "__main__":
     # Argument parser
     parser = argparse.ArgumentParser(description="Analyzes dat files of subsequence \
@@ -134,6 +159,8 @@ if __name__ == "__main__":
         in hours. Defaults to 24 hours.")
     parser.add_argument("--prog", type=str, help="If True, prints progress \
         messages.")
+    parser.add_argument("--pf", type=str, help="If True, sums pass and fail files \
+        separately.")
     # parser.add_argument("--Lhist", type=bool, help="If True, makes a histogram \
     #     of the average Q scores of the sequences.")
     parser.add_argument("--beep", type=int, help="Plays a sound using beepy when \
@@ -180,20 +207,37 @@ if __name__ == "__main__":
     else:
         which_beep = 1
 
+    if args.pf:
+        pf = eval(args.pf)
+    else:
+        pf = False
+
     # Get all the dat files
     dat_files = Path(dat_folder).rglob("*.dat")
     dat_file_list = [str(file) for file in dat_files]
 
+
+
+
     # Get the number of targets
     n_targets, target_list, target_lengths, n_barcodes, settings_dict = \
     get_count_settings(count_settings_path)
+    save_file_path = f"{dat_folder}/{save_file_name}_all_target_comp_slide_counts.txt"
 
     start = time.perf_counter()
-    total_target_comp_sum_array = read_slide_dat_file_all_parallel(dat_file_list, n_targets)
-    
-
-    save_file_path = f"{dat_folder}/{save_file_name}_all_target_comp_slide_counts.txt"
-    write_all_summed_counts_array(save_file_path, total_target_comp_sum_array)
+    if pf:
+        dat_file_arr = np.array(dat_file_list)
+        pass_file_arr = dat_file_arr[["pass" in file_name for file_name in dat_file_arr]]
+        fail_file_arr = dat_file_arr[["fail" in file_name for file_name in dat_file_arr]]
+        pass_target_comp_sum_array = read_slide_dat_file_all_parallel(pass_file_arr, n_targets)
+        fail_target_comp_sum_array = read_slide_dat_file_all_parallel(fail_file_arr, n_targets)
+        total_target_comp_sum_array = pass_target_comp_sum_array + fail_target_comp_sum_array
+        summed_counts_arrays = [pass_target_comp_sum_array, fail_target_comp_sum_array, \
+        total_target_comp_sum_array]
+        write_all_summed_counts_array_pf(save_file_path, summed_counts_arrays)
+    else:
+        total_target_comp_sum_array = read_slide_dat_file_all_parallel(dat_file_list, n_targets)
+        write_all_summed_counts_array(save_file_path, total_target_comp_sum_array)
 
     end = time.perf_counter()
     print("Time elapsed: {} second(s)".format(end-start))
