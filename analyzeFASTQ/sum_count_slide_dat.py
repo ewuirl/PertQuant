@@ -3,9 +3,107 @@ from pathlib import Path
 import numpy as np
 import concurrent.futures
 # import os
+import datetime as dt
 import time
 import beepy as bp
 from PertQuant.analyzeFASTQ.sum_count_dat import get_count_settings
+from PertQuant.analyzeFASTQ.sum_count_dat import get_time_range
+from PertQuant.analyzeFASTQ.sum_count_dat import decide_time_bin
+
+def stripped_str_2_date_time(read_time_str):
+    """
+    str_2_date_time(read_time_str)
+
+    This function takes a read time string and creates a date time object 
+    containing the information.
+
+    Arguments:
+        read_time_str (str): A string describing the time the sequence was read.
+
+    Returns: 
+        read_time (datetime): A datetime object representing the time the 
+            sequence was read..
+    """
+    read_time = dt.datetime(int(read_time_str[:4]), int(read_time_str[5:7]), \
+                int(read_time_str[8:10]), hour=int(read_time_str[11:13]), \
+                minute=int(read_time_str[14:16]), second=int(read_time_str[17:19]))
+    return read_time 
+
+def read_slide_dat_file_time(dat_file_path):
+    """
+    This function takes a path to a dat file of counts and bins each read's 
+    counts by its read time. It sums the counts in each bin, and returns an array
+    of these summed, binned counts. Each column in the array represents the 
+    counts for a different subsequence, and each row represents the counts for a
+    different bin. Each time bin is upper bound inclusive and lower bound 
+    exclusive, except the first and last bins. To ensure all reads are binned, 
+    the first bin is inclusive of read times equal to or before the start time, 
+    and the last bin is inclusive of read times equal to or after the end of the 
+    run.
+
+    Arguments:
+        dat_file_path (str): The path to the dat file to get base-averaged Q 
+            scores for.
+
+    Global Arguments:
+        n_targets (int): The number of target sequences in the run.
+        target_lengths (list): A list of the target lengths (int).
+        n_barcodes (int): The number of barcode sequences.
+        min_len (int): The minimum subsequence length that was counted.
+        barcoded (bool): If True, the read data is barcoded, and will be sorted
+            according to barcode as well. Specified by command-line argument. 
+            Defaults to False.
+        prog (bool): If True, progress statements are printed. Specified by     
+            command-line argument. Defaults to False.
+        start_time (datetime): A datetime object of the start of the sequencing
+            run.
+        time_range_len (int): The number of time bins.
+        time_step_td (timedelta): A timedelta object of the timestep of the bins.
+
+    Returns:
+        target_sum_array_list (list): A list of arrays of subsequence counts 
+            binned and summed by read time. Each target gets its own array. 
+        targetc_sum_array_list (list): A list of arrays of complement subsequence 
+            counts binned and summed by read time. Each target gets its own array. 
+    """
+    global n_targets
+    global target_lengths
+    global n_barcodes
+    global min_len
+    global barcoded 
+    global prog
+    global start_time
+    global time_range_len
+    global time_step_td
+
+    with open(dat_file_path, 'r') as dat_file:
+        header = dat_file.readline()
+        # Set up the lists of summed arrays
+        
+        target_comp_sum_array = np.zeros((len(time_range), int(n_targets*2)),dtype=int)
+        while True:
+            # Read the sequence ID
+            line = dat_file.readline()
+            if not line:
+                break
+            line_list = line.rstrip("\n").split("\t")
+            # Get read time
+            read_time_str = line_list[3]
+            read_time = stripped_str_2_date_time(read_time_str)
+            # Decide time bin
+            current_bin = decide_time_bin(read_time, start_time, time_step_td, \
+                time_range_len)
+
+            target_comp_sum_array[current_bin,:] += np.array(line_list[8:],dtype=int)
+
+        if prog:
+            dat_file_name = dat_file_path.split("/")[-1]
+            dat_file_name_list = dat_file_name.split("_")
+            print(f"Finished counting {dat_file_name_list[1]} file {dat_file_name_list[3]} count data.")
+        else:
+            pass
+
+        return target_comp_sum_array
 
 def read_slide_dat_file_all(dat_file_path):
     """
@@ -54,7 +152,7 @@ def read_slide_dat_file_all(dat_file_path):
                 break
             line_list = line.rstrip("\n").split("\t")
             # print(np.array(line_list[7:],dtype=int))
-            target_comp_sum_array += np.array(line_list[7:],dtype=int)
+            target_comp_sum_array += np.array(line_list[8:],dtype=int)
 
         if prog:
             dat_file_name = dat_file_path.split("/")[-1]
@@ -63,6 +161,43 @@ def read_slide_dat_file_all(dat_file_path):
         else:
             pass
         return target_comp_sum_array
+
+def read_slide_dat_file_bin_parallel(bin_range, bin_func, dat_file_list):
+    """
+    read_dat_file_bin_parallel(bin_range, bin_func, dat_file_list, target_lengths)
+
+    This function takes a list of dat files, and a list of target lengths, and 
+    it parallelizes the summing and binning using the provided bin range and 
+    read binning function of the subsequence counts of the reads in all of the 
+    files. The counts are also summed across files.
+    
+    Arguments:
+        bin_range (arr): An array of the lower bounds of the bins to bin the
+            subsequence counts with.
+        bin_func (func): The function to use to bin the subsequence counts with,
+            such as read_dat_file_Pbin and read_dat_file_time.
+        dat_file_list (list): A list of paths to dat file of subsequence counts 
+            to bin and sum.
+        target_lengths (list): A list of the target lengths (int).
+    
+    Returns:
+        total_target_sum_array_list (list): A list of arrays of subsequence counts 
+            binned and summed and summed using bin_func. Results of each file 
+            are also summed. Each target gets its own array. 
+        total_targetc_sum_array_list (list): A list of arrays of complement 
+            subsequence counts binned and summed using bin_func. Results of each
+            file are also summed. Each target gets its own array. 
+    """
+    total_target_comp_sum_array = np.zeros((len(bin_range),int(2*n_targets)), dtype=int)
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        results = executor.map(bin_func, dat_file_list)
+        for result in results:
+            # Unpack the subsequence counts
+            total_target_comp_sum_array += result
+    return total_target_comp_sum_array
+
+
 
 def read_slide_dat_file_all_parallel(dat_file_list, n_targets):
     """
@@ -115,7 +250,7 @@ def write_all_summed_counts_array(save_file_path, summed_counts_array):
         for i in range(len(summed_counts_array)):
             save_file.write(f"{summed_counts_array[i]}\t")
 
-def write_all_summed_counts_array_pf(save_file_path, summed_counts_arrays):
+def write_2d_summed_counts_array(save_file_path, summed_counts_arrays):
     """
     write_all_summed_counts_array(save_file_path, summed_counts_array)
 
@@ -123,22 +258,25 @@ def write_all_summed_counts_array_pf(save_file_path, summed_counts_arrays):
     
     Arguments:
         save_file_path (str): The path to the file to save the data to.
-        summed_counts_array (arr): A 1D array containing summed subsequence count
-            data.
+        summed_counts_arrays (tuple): 
 
     Returns:
         Nothing. Writes the data in the provided array to the file specified by
             the path.
     """
+    arr_shape = summed_counts_arrays.shape
     with open(save_file_path, 'w') as save_file:
-        for i in range(int(len(summed_counts_arrays[0])/2)):
+        for i in range(int(arr_shape[1]/2)):
             save_file.write(f"{i}\t{i}C\t")
         save_file.write(f"\n")
-        for i in range(len(summed_counts_arrays)):
-            for j in range(len(summed_counts_arrays[i])):
+        for i in range(arr_shape[0]):
+            for j in range(arr_shape[1]):
                 save_file.write(f"{summed_counts_arrays[i][j]}\t")
-            if i < len(summed_counts_arrays) - 1:
+            if i < arr_shape[0] - 1:
                 save_file.write("\n")
+            else:
+                pass
+
 
 if __name__ == "__main__":
     # Argument parser
@@ -216,28 +354,41 @@ if __name__ == "__main__":
     dat_files = Path(dat_folder).rglob("*.dat")
     dat_file_list = [str(file) for file in dat_files]
 
-
-
-
     # Get the number of targets
     n_targets, target_list, target_lengths, n_barcodes, settings_dict = \
     get_count_settings(count_settings_path)
-    save_file_path = f"{dat_folder}/{save_file_name}_all_target_comp_slide_counts.txt"
 
-    start = time.perf_counter()
-    if pf:
-        dat_file_arr = np.array(dat_file_list)
-        pass_file_arr = dat_file_arr[["pass" in file_name for file_name in dat_file_arr]]
-        fail_file_arr = dat_file_arr[["fail" in file_name for file_name in dat_file_arr]]
-        pass_target_comp_sum_array = read_slide_dat_file_all_parallel(pass_file_arr, n_targets)
-        fail_target_comp_sum_array = read_slide_dat_file_all_parallel(fail_file_arr, n_targets)
-        total_target_comp_sum_array = pass_target_comp_sum_array + fail_target_comp_sum_array
-        summed_counts_arrays = [pass_target_comp_sum_array, fail_target_comp_sum_array, \
-        total_target_comp_sum_array]
-        write_all_summed_counts_array_pf(save_file_path, summed_counts_arrays)
+
+    if time_step > 0.0:
+        # Get the time range info
+        start_time, end_time, time_step_range, time_range = get_time_range(time_step, run_length, dat_folder)
+        time_step_td = dt.timedelta(minutes=time_step)
+        time_range_len = len(time_range)
+
+        start = time.perf_counter()
+        # Sum and bin the counts according to average P(corr)
+        binned_target_comp_array = \
+        read_slide_dat_file_bin_parallel(time_range, read_slide_dat_file_time, dat_file_list)
+
+        save_file_path = f"{dat_folder}/{save_file_name}_tstep-{time_step}_target_comp_slide_counts.txt"
+        # Write the summedd counts to save files
+        write_2d_summed_counts_array(save_file_path, binned_target_comp_array)
     else:
-        total_target_comp_sum_array = read_slide_dat_file_all_parallel(dat_file_list, n_targets)
-        write_all_summed_counts_array(save_file_path, total_target_comp_sum_array)
+        save_file_path = f"{dat_folder}/{save_file_name}_all_target_comp_slide_counts.txt"
+        start = time.perf_counter()
+        if pf:
+            dat_file_arr = np.array(dat_file_list)
+            pass_file_arr = dat_file_arr[["pass" in file_name for file_name in dat_file_arr]]
+            fail_file_arr = dat_file_arr[["fail" in file_name for file_name in dat_file_arr]]
+            pass_target_comp_sum_array = read_slide_dat_file_all_parallel(pass_file_arr, n_targets)
+            fail_target_comp_sum_array = read_slide_dat_file_all_parallel(fail_file_arr, n_targets)
+            total_target_comp_sum_array = pass_target_comp_sum_array + fail_target_comp_sum_array
+            all_summed_counts_array = np.vstack((pass_target_comp_sum_array, fail_target_comp_sum_array, \
+            total_target_comp_sum_array))
+            write_2d_summed_counts_array(save_file_path, all_summed_counts_array)
+        else:
+            total_target_comp_sum_array = read_slide_dat_file_all_parallel(dat_file_list, n_targets)
+            write_all_summed_counts_array(save_file_path, total_target_comp_sum_array)
 
     end = time.perf_counter()
     print("Time elapsed: {} second(s)".format(end-start))
