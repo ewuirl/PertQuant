@@ -1,6 +1,6 @@
 #! /bin/bash
 #SBATCH --job-name="4_C1"
-#SBATCH --output="output.out"
+#SBATCH --output="output_C1.out"
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
