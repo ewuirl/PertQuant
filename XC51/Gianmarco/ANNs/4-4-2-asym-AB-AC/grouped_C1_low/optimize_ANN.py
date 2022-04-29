@@ -155,8 +155,10 @@ def optimize(
 def train_one_model(
     X_train,
     X_test,
+    X_val,
     y_train,
     y_test,
+    y_val,
     best_params,
     lname,
     regression,
@@ -177,18 +179,22 @@ def train_one_model(
     )
     results_train = model.evaluate(X_train, y_train)
     results_test = model.evaluate(X_test, y_test)
-    res_dict_train, res_dict_test = {}, {}
+    results_val = model.evaluate(X_val, y_val)
+    res_dict_train, res_dict_test, res_dict_val = {}, {}, {}
     for ii, key in enumerate(model.metrics_names):
         res_dict_train.update({key: results_train[ii]})
-    for ii, key in enumerate(model.metrics_names):
         res_dict_test.update({key: results_test[ii]})
+        res_dict_val.update({key: results_val[ii]})
     if regression:
         y_train = y_scaler.inverse_transform(y_train)
         y_test = y_scaler.inverse_transform(y_test)
+        y_val = y_scaler.inverse_transform(y_val)
         hat_y_train = y_scaler.inverse_transform(model.predict(X_train))
         hat_y_test = y_scaler.inverse_transform(model.predict(X_test))
+        hat_y_val = y_scaler.inverse_transform(model.predict(X_val))
         res_dict_train.update({"mae_org": mean_absolute_error(y_train, hat_y_train)})
         res_dict_test.update({"mae_org": mean_absolute_error(y_test, hat_y_test)})
+        res_dict_val.update({"mae_org": mean_absolute_error(y_val, hat_y_val)})
 
         scaled_train_mae = mean_absolute_error(y_train, hat_y_train) / (
             max(y_train) - min(y_train)
@@ -202,18 +208,37 @@ def train_one_model(
         res_dict_test.update(
             {"scaled_mae_org": scaled_test_mae[0]}
         )  # scaled_test_mae is an array with one entry
+        scaled_val_mae = mean_absolute_error(y_val, hat_y_val) / (
+            max(y_train) - min(y_train)
+        )
+        res_dict_val.update(
+            {"scaled_mae_org": scaled_val_mae[0]}
+        )  # scaled_test_mae is an array with one entry
+
 
         train_R2 = r2_score(y_train, hat_y_train)
         res_dict_train.update({"R2_org": train_R2})
         test_R2 = r2_score(y_test, hat_y_test)
         res_dict_test.update({"R2_org": test_R2})
+        val_R2 = r2_score(y_val, hat_y_val)
+        res_dict_val.update({"R2_org": val_R2})
 
     else:
         hat_y_train = model.predict(X_train)
         hat_y_test = model.predict(X_test)
     print("res_dict_train: ", res_dict_train)
     print("res_dict_test: ", res_dict_test)
-    model.save(model_name + ".h5")
+    print("res_dict_val: ", res_dict_val)
+    model.save(f"{model_name}.h5")
+
+    # Writing a text file of the results
+    with open(f'performance_{lname[0]}.txt', 'w') as f:
+        f.write('Train metrics\n')
+        f.write(f'{str(res_dict_train)}\n')
+        f.write('Test metrics\n')
+        f.write(f'{str(res_dict_test)}\n')
+        f.write('Val metrics\n')
+        f.write(f'{str(res_dict_val)}\n')
 
 
 # Used to check if a column has all the same values (if so, will remove it).
@@ -224,7 +249,7 @@ def is_same(
     return (a[0] == a).all()
 
 
-df = pd.read_csv("4-4-2-asym-AB-AC_grouped_C2_low.csv")  # Note: Change as needed.
+df = pd.read_csv("4-4-2-asym-AB-AC_grouped_C1_low.csv")  # Note: Change as needed.
 
 # Removing all columns for which all data has the same values.
 
@@ -247,7 +272,7 @@ df_test = df[df["bin"] == "test"]
 df_train_all = df_train.append(df_val)
 
 fnames = [val for val in df_train.columns.values if val in descriptors]
-target_property = "C2"  # Note: Can adjust this to target the other C_i
+target_property = "C1"  # Note: Can adjust this to target the other C_i
 lname = [target_property]
 
 # Normalizing with train and validation data.
@@ -275,14 +300,19 @@ trials, best_params = optimize(
     allarch=True,
 )
 print("best_params: ", best_params)
+with open(f"best_params_{target_property}.txt", w) as f:
+    f.write('Best hyperparameters:\n')
+    f.write(f'{str(best_params)}\n')
 with open("trial.pkl", "wb") as fo:
     pickle.dump(trials, fo)
 
 train_one_model(
     X_train_all,
     X_test,
+    X_val,
     y_train_all,
     y_test,
+    y_val,
     best_params,
     lname,
     regression=True,

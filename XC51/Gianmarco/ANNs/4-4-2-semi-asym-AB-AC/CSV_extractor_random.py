@@ -1,15 +1,14 @@
 import sys
 import numpy as np
-sys.path.append("../../")
+sys.path.append("../../../../")
 from simCRN.multivariate_reg import (
-    read_eq_data_file,
-
+    read_eq_data_file
 )
 from sklearn.model_selection import train_test_split
 import pandas as pd
 
-FILENAME = "4-4-2-asym-AB-AC"  # Note: Adjust this as needed.
-Ci_all_array, Am_array, Cmin, Cmax, Ai = read_eq_data_file(f"../{FILENAME}.txt")
+FILENAME = "4-4-2-semi-asym-AB-AC"  # Note: Adjust this as needed.
+Ci_all_array, Am_array, Cmin, Cmax, Ai = read_eq_data_file(f"../../../{FILENAME}.txt")
 
 # I will use this script to convert things into CSV format.
 # This is because my TensorFlow workflows take CSVs.
