@@ -615,11 +615,11 @@ def ID_sequences(tag_array, num_targets, min_stretch):
     clean_tag_array = tag_array[:,~np.all(np.isnan(tag_array), axis=0)].astype(int)
     # An array to store the counts in
     sequence_counts_arr = np.zeros(num_targets, dtype=int)
-    if clean_tag_array.shape[1] >= min_stretch:
-        previous_tag = clean_tag_array[0,0]
-        previous_sequence = clean_tag_array[1,0]
+    if clean_tag_array.shape[1] >= min_stretch:    
         fragment_len = 1
         for i in range(np.shape(clean_tag_array)[1]-1):
+            previous_tag = clean_tag_array[0,i]
+            previous_sequence = clean_tag_array[1,i]
             current_tag = clean_tag_array[0,i+1]
             current_sequence = clean_tag_array[1,i+1]
             if current_sequence == previous_sequence and previous_tag < current_tag:
@@ -633,11 +633,42 @@ def ID_sequences(tag_array, num_targets, min_stretch):
                     pass
                 # Reset the fragment length
                 fragment_len = 1
-                # Reset the sequence
-                previous_sequence = current_sequence
-            previous_tag = current_tag
+        # Check the last sequence
+        if fragment_len >= min_stretch:
+            sequence_counts_arr[clean_tag_array[1,-1]] += 1
+        else:
+            pass
     else:
         pass
+    return sequence_counts_arr
+
+def ID_sequences_stretch_range(tag_array, num_targets, max_stretch):
+    clean_tag_array = tag_array[:,~np.all(np.isnan(tag_array), axis=0)].astype(int)
+    stretch_range = np.arange(1, max_stretch+1)
+    # An array to store the counts in
+    sequence_counts_arr = np.zeros((len(stretch_range),num_targets), dtype=int)
+    if clean_tag_array.shape[1]> 1:
+        fragment_len = 1
+        sequence_counts_arr[0, clean_tag_array[1,0]] += 1
+#         print(f"adding to 1, {clean_tag_array[1,0]}")
+        for i in range(np.shape(clean_tag_array)[1]-1):
+            previous_tag = clean_tag_array[0,i]
+            previous_sequence = clean_tag_array[1,i]
+            current_tag = clean_tag_array[0,i+1]
+            current_sequence = clean_tag_array[1,i+1]
+            if current_sequence == previous_sequence and previous_tag < current_tag:
+                # Add to the fragment
+                fragment_len += 1
+                sequence_counts_arr[fragment_len-1, previous_sequence] += 1
+#                 print(f"adding to {fragment_len}, {previous_sequence}")
+            else:
+                # Reset the fragment length
+                fragment_len = 1
+                # Add to the new sequence
+                sequence_counts_arr[fragment_len-1, current_sequence] += 1
+#                 print(f"adding to {fragment_len}, {current_sequence}")   
+    else:
+        sequence_counts_arr[0, clean_tag_array[1]] = 1
     return sequence_counts_arr
 
 def check_repeat_errors(sequence, repeat_list, n_repeat):
@@ -800,6 +831,17 @@ def count_seq_slide(sequence):
     sequence_counts_arr = ID_sequences(tag_array, num_target_comp, min_stretch)
     return sequence_counts_arr
 
+def count_seq_slide_stretch(sequence):
+    global target_subseq_array
+    global num_target_comp
+    global min_len
+    global stride
+    global max_stretch
+    tag_array = tag_subsequences(sequence, target_subseq_array, num_target_comp, min_len, \
+    stride=stride)
+    sequence_counts_arr = ID_sequences_stretch_range(tag_array, num_target_comp, max_stretch)
+    return sequence_counts_arr
+
 def analyze_seq_prob(index):
     seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, sequence = get_seq_info(index)
     target_count_list, targetc_count_list = count_seq_prob(sequence)
@@ -811,6 +853,12 @@ def analyze_seq_slide(index):
     sequence_counts_arr = count_seq_slide(sequence)
     return(seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
         sequence_counts_arr)
+
+def analyze_seq_slide_stretch(index):
+    seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, sequence = get_seq_info(index)
+    sequence_counts_arr = count_seq_slide_stretch(sequence)
+    return(seq_ID, avg_Q_score, seq_len, barcode_ID, has_repeat_error, \
+        sequence_counts_arr.flatten())
 
 # def analyze_seq(index):
 #     """
@@ -1231,6 +1279,7 @@ if __name__ == "__main__":
         1-7. To not play a sound, set to 0. Defaults to 1.")
     parser.add_argument("--min_stretch", type=int, help="Overrides min_stretch in \
         settings file.")
+    parser.add_argument("--max_stretch", type=int, help="Uses slide stretch method.")
     parser.add_argument("--save_path", type=str, help="Overrides save_path in \
         settings file.")
     args = parser.parse_args()
@@ -1290,7 +1339,10 @@ if __name__ == "__main__":
         min_stretch = int(args.min_stretch)
     else:
         pass
-
+    if args.max_stretch:
+        max_stretch = int(args.max_stretch)
+    else:
+        max_stretch = 0
     if args.save_path:
         save_path = f"{fastq_folder}/{args.save_path}"
     else:
@@ -1309,9 +1361,12 @@ if __name__ == "__main__":
         write_dat_file = write_dat_file_prob
 
     else:
-        analyze_seq = analyze_seq_slide
         write_dat_file = write_dat_file_slide
         target_subseq_array = make_target_subseq_array(target_list, target_len, min_len)
+        if max_stretch == 0:
+            analyze_seq = analyze_seq_slide
+        else:
+            analyze_seq = analyze_seq_slide_stretch
 
     # Read in the barcode file if the data is barcoded and make a dictionary
     if args.barcoded:
