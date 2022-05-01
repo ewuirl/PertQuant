@@ -249,7 +249,7 @@ def is_same(
     return (a[0] == a).all()
 
 
-df = pd.read_csv("4-4-2-asym-AB-AC_grouped_C2_low.csv")  # Note: Change as needed.
+df = pd.read_csv("10-10-2-asym-AB-AC_grouped_C2_low.csv")  # Note: Change as needed.
 
 # Removing all columns for which all data has the same values.
 
