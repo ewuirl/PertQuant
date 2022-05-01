@@ -1,0 +1,13 @@
+#! /bin/bash
+#SBATCH --job-name="C2_high"
+#SBATCH --output="output.out"
+#SBATCH --partition=shared
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=4
+#SBATCH --mem-per-cpu=12G
+#SBATCH --account="mit136"
+#SBATCH --export=ALL
+#SBATCH -t 24:00:00
+
+source activate molSimplify
+python optimize_ANN.py
