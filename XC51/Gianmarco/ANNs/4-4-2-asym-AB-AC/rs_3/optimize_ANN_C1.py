@@ -300,7 +300,7 @@ trials, best_params = optimize(
     allarch=True,
 )
 print("best_params: ", best_params)
-with open(f"best_params_{target_property}.txt", w) as f:
+with open(f"best_params_{target_property}.txt", "w") as f:
     f.write('Best hyperparameters:\n')
     f.write(f'{str(best_params)}\n')
 with open(f"trial_{target_property}.pkl", "wb") as fo:
