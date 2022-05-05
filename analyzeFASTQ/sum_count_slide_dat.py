@@ -250,7 +250,7 @@ def write_all_summed_counts_array(save_file_path, summed_counts_array):
         for i in range(len(summed_counts_array)):
             save_file.write(f"{summed_counts_array[i]}\t")
 
-def write_2d_summed_counts_array(save_file_path, summed_counts_arrays):
+def write_2d_summed_counts_array(save_file_path, summed_counts_arrays, max_stretch=0):
     """
     write_all_summed_counts_array(save_file_path, summed_counts_array)
 
@@ -264,10 +264,17 @@ def write_2d_summed_counts_array(save_file_path, summed_counts_arrays):
         Nothing. Writes the data in the provided array to the file specified by
             the path.
     """
+    global n_targets
     arr_shape = summed_counts_arrays.shape
     with open(save_file_path, 'w') as save_file:
-        for i in range(int(arr_shape[1]/2)):
-            save_file.write(f"{i}\t{i}C\t")
+        if max_stretch > 0:
+            num_targets = int(arr_shape[1]/(max_stretch*2))
+            for i in range(max_stretch):
+                for j in range(num_targets):
+                    save_file.write(f"{j}_{i+1}\t{j}C_{i+1}\t")
+        else:
+            for i in range(int(arr_shape[1]/2)):
+                save_file.write(f"{i}\t{i}C\t")
         save_file.write(f"\n")
         for i in range(arr_shape[0]):
             for j in range(arr_shape[1]):
@@ -298,6 +305,8 @@ if __name__ == "__main__":
     parser.add_argument("--prog", type=str, help="If True, prints progress \
         messages.")
     parser.add_argument("--pf", type=str, help="If True, sums pass and fail files \
+        separately.")
+    parser.add_argument("--max_stretch", type=str, help="If True, sums pass and fail files \
         separately.")
     # parser.add_argument("--Lhist", type=bool, help="If True, makes a histogram \
     #     of the average Q scores of the sequences.")
@@ -350,6 +359,11 @@ if __name__ == "__main__":
     else:
         pf = False
 
+    if args.max_stretch:
+        max_stretch = int(args.max_stretch)
+    else:
+        max_stretch = 0
+
     # Get all the dat files
     dat_files = Path(dat_folder).rglob("*.dat")
     dat_file_list = [str(file) for file in dat_files]
@@ -358,6 +372,10 @@ if __name__ == "__main__":
     n_targets, target_list, target_lengths, n_barcodes, settings_dict = \
     get_count_settings(count_settings_path)
 
+    if max_stretch > 0:
+        n_targets = n_targets*max_stretch
+    else:
+        pass
 
     if time_step > 0.0:
         # Get the time range info
@@ -372,7 +390,7 @@ if __name__ == "__main__":
 
         save_file_path = f"{dat_folder}/{save_file_name}_tstep-{time_step}_target_comp_slide_counts.txt"
         # Write the summedd counts to save files
-        write_2d_summed_counts_array(save_file_path, binned_target_comp_array)
+        write_2d_summed_counts_array(save_file_path, binned_target_comp_array, max_stretch=max_stretch)
     else:
         save_file_path = f"{dat_folder}/{save_file_name}_all_target_comp_slide_counts.txt"
         start = time.perf_counter()
@@ -385,7 +403,7 @@ if __name__ == "__main__":
             total_target_comp_sum_array = pass_target_comp_sum_array + fail_target_comp_sum_array
             all_summed_counts_array = np.vstack((pass_target_comp_sum_array, fail_target_comp_sum_array, \
             total_target_comp_sum_array))
-            write_2d_summed_counts_array(save_file_path, all_summed_counts_array)
+            write_2d_summed_counts_array(save_file_path, all_summed_counts_array, max_stretch=max_stretch)
         else:
             total_target_comp_sum_array = read_slide_dat_file_all_parallel(dat_file_list, n_targets)
             write_all_summed_counts_array(save_file_path, total_target_comp_sum_array)
