@@ -38,7 +38,7 @@ ax1.bar(x, C1_means[:4], yerr=C1_stdevs[:4], capsize=3, color='#FF0000', edgecol
 ax1.set_xticks(x)
 ax1.set_xticklabels(tick_labels[:4])
 ax1.set_xlabel("experiment type", fontweight='bold')
-ax1.set_ylabel("mean absolute error (M/L)", fontweight='bold')
+ax1.set_ylabel("mean absolute error (M)", fontweight='bold')
 ax1.set_ylim(top=1.25E-08)
 ax1.set_title('Case 1', fontweight='bold')
 
@@ -47,7 +47,7 @@ ax2.bar(x, C1_means[4:], yerr=C1_stdevs[4:], capsize=3, color='#FF0000', edgecol
 ax2.set_xticks(x)
 ax2.set_xticklabels(tick_labels[4:])
 ax2.set_xlabel("experiment type", fontweight='bold')
-ax2.set_ylabel("mean absolute error (M/L)", fontweight='bold')
+ax2.set_ylabel("mean absolute error (M)", fontweight='bold')
 ax2.set_ylim(top=1.25E-08)
 ax2.set_title('Case 2', fontweight='bold')
 
@@ -64,7 +64,7 @@ ax1.bar(x, C2_means[:4], yerr=C2_stdevs[:4], capsize=3, color='#FF0000', edgecol
 ax1.set_xticks(x)
 ax1.set_xticklabels(tick_labels[:4])
 ax1.set_xlabel("experiment type", fontweight='bold')
-ax1.set_ylabel("mean absolute error (M/L)", fontweight='bold')
+ax1.set_ylabel("mean absolute error (M)", fontweight='bold')
 ax1.set_ylim(top=2.50E-08)
 ax1.set_title('Case 1', fontweight='bold')
 
@@ -73,7 +73,7 @@ ax2.bar(x, C2_means[4:], yerr=C2_stdevs[4:], capsize=3, color='#FF0000', edgecol
 ax2.set_xticks(x)
 ax2.set_xticklabels(tick_labels[4:])
 ax2.set_xlabel("experiment type", fontweight='bold')
-ax2.set_ylabel("mean absolute error (M/L)", fontweight='bold')
+ax2.set_ylabel("mean absolute error (M)", fontweight='bold')
 ax2.set_ylim(top=2.50E-08)
 ax2.set_title('Case 2', fontweight='bold')
 

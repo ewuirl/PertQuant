@@ -55,7 +55,7 @@ C1_high_plot = ax1.bar(x+0.2, C1_high[:4], width, label='grouped high', color='#
 ax1.set_xticks(x)
 ax1.set_xticklabels(tick_labels[:4])
 ax1.set_xlabel("experiment type", fontweight='bold')
-ax1.set_ylabel("mean absolute error (M/L)", fontweight='bold')
+ax1.set_ylabel("mean absolute error (M)", fontweight='bold')
 # ax1.set_ylim(top=1.25E-08)
 ax1.set_title('Case 1', fontweight='bold')
 
@@ -71,7 +71,7 @@ C1_high_plot = ax2.bar(x+0.2, C1_high[4:], width, label='grouped high', color='#
 ax2.set_xticks(x)
 ax2.set_xticklabels(tick_labels[4:])
 ax2.set_xlabel("experiment type", fontweight='bold')
-ax2.set_ylabel("mean absolute error (M/L)", fontweight='bold')
+ax2.set_ylabel("mean absolute error (M)", fontweight='bold')
 # ax1.set_ylim(top=1.25E-08)
 ax2.set_title('Case 2', fontweight='bold')
 
@@ -95,7 +95,7 @@ C2_high_plot = ax1.bar(x+0.2, C2_high[:4], width, label='grouped high', color='#
 ax1.set_xticks(x)
 ax1.set_xticklabels(tick_labels[:4])
 ax1.set_xlabel("experiment type", fontweight='bold')
-ax1.set_ylabel("mean absolute error (M/L)", fontweight='bold')
+ax1.set_ylabel("mean absolute error (M)", fontweight='bold')
 # ax1.set_ylim(top=1.25E-08)
 ax1.set_title('Case 1', fontweight='bold')
 
@@ -111,7 +111,7 @@ C2_high_plot = ax2.bar(x+0.2, C2_high[4:], width, label='grouped high', color='#
 ax2.set_xticks(x)
 ax2.set_xticklabels(tick_labels[4:])
 ax2.set_xlabel("experiment type", fontweight='bold')
-ax2.set_ylabel("mean absolute error (M/L)", fontweight='bold')
+ax2.set_ylabel("mean absolute error (M)", fontweight='bold')
 # ax1.set_ylim(top=1.25E-08)
 ax2.set_title('Case 2', fontweight='bold')
 
