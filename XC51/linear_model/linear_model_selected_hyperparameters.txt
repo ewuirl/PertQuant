@@ -1,0 +1,97 @@
+2-2-2 Case 1
+Data set size: 1000
+{'reg': 0.21701214268038171, 'reg_type': L2}
+Data set size: 500
+{'reg': 0.043655001900984036, 'reg_type': L2}
+Data set size: 250
+{'reg': 0.10358328030661057, 'reg_type': L2}
+Data set size: 125
+{'reg': 0.009412697089160593, 'reg_type': L1}
+Data set size: 62.5
+{'reg': 0.14151493095862056, 'reg_type': L2}
+
+2-2-2 Case 2
+Data set size: 2000
+{'reg': 0.20558489528684332, 'reg_type': L2}
+Data set size: 1000
+{'reg': 0.14245469865609595, 'reg_type': L2}
+Data set size: 500
+{'reg': 0.22017647188734446, 'reg_type': L2}
+Data set size: 250
+{'reg': 0.5955966224536968, 'reg_type': L2}
+Data set size: 125
+{'reg': 0.18904428103956983, 'reg_type': L2}
+Data set size: 62.5
+{'reg': 0.1649508114013365, 'reg_type': L2}
+
+4-4-2 Case 1
+Data set size: 2000
+{'reg': 0.047136627196096015, 'reg_type': L2}
+Data set size: 1000
+{'reg': 0.20255777272425668, 'reg_type': L2}
+Data set size: 500
+{'reg': 0.03512181583087526, 'reg_type': L2}
+Data set size: 250
+{'reg': 0.04755390364123202, 'reg_type': L2}
+Data set size: 125
+{'reg': 0.17056329547019966, 'reg_type': L2}
+Data set size: 62.5
+{'reg': 0.025625489412048896, 'reg_type': L2}
+
+4-4-2 Case 2
+Data set size: 2000
+{'reg': 0.03951683878468004, 'reg_type': L2}
+Data set size: 1000
+{'reg': 0.08428799001390264, 'reg_type': L2}
+Data set size: 500
+{'reg': 0.04002179613931123, 'reg_type': L2}
+Data set size: 250
+{'reg': 0.007837822006793171, 'reg_type': L2}
+Data set size: 125
+{'reg': 0.08519472943685158, 'reg_type': L2}
+Data set size: 62.5
+{'reg': 0.09034860305424774, 'reg_type': L2}
+
+10-10-2 Case 1
+Data set size: 2000
+{'reg': 0.006699632396800492, 'reg_type': L2}
+Data set size: 1000
+{'reg': 0.3643519198842282, 'reg_type': L2}
+Data set size: 500
+{'reg': 0.16881373872377758, 'reg_type': L2}
+Data set size: 250
+{'reg': 0.0024525370393879697, 'reg_type': L2}
+Data set size: 125
+{'reg': 0.02107495087108502, 'reg_type': L2}
+Data set size: 62.5
+{'reg': 0.19413768671312615, 'reg_type': L2}
+
+10-10-2 Case 2
+Data set size: 2000
+{'reg': 0.02518316965708478, 'reg_type': L2}
+Data set size: 1000
+{'reg': 0.5844169584274128, 'reg_type': L2}
+Data set size: 500
+{'reg': 0.05244520511469286, 'reg_type': L2}
+Data set size: 250
+{'reg': 0.4822398841039588, 'reg_type': L2}
+Data set size: 125
+{'reg': 0.18083841339628925, 'reg_type': L2}
+Data set size: 62.5
+{'reg': 0.17067364070791902, 'reg_type': L2}
+
+20-20-2 Case 1
+Data set size: 3000
+{'reg': 0.19925285472220722, 'reg_type': L2}
+Data set size: 2000
+{'reg': 0.027628135807076237, 'reg_type': L2}
+Data set size: 1000
+{'reg': 0.13475878799301566, 'reg_type': L2}
+Data set size: 500
+{'reg': 0.006995715913749034, 'reg_type': L2}
+Data set size: 250
+{'reg': 0.02360645585200216, 'reg_type': L2}
+Data set size: 125
+{'reg': 0.12172354288395026, 'reg_type': L2}
+Data set size: 62.5
+{'reg': 0.08595722551475782, 'reg_type': L2}
