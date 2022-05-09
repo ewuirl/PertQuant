@@ -107,10 +107,15 @@ def main():
     truth_values = df_predictions[lname[0]]  # Note: change as needed
     prediction_values = df_predictions["Prediction"]
 
+    truth_values = [item * 1E6 for item in truth_values] # Converting to micromolar
+    prediction_values = [item * 1E6 for item in prediction_values]
+
     plt.scatter(truth_values, prediction_values)
-    plt.xlabel('Truth (M)', fontweight='bold')
-    plt.ylabel('Prediction (M)', fontweight='bold')
-    plt.title('Parity plot for C$_1$', fontweight='bold') # Note: change as needed
+    plt.xlabel('Truth (\u03BCM)', fontweight='bold')
+    plt.ylabel('Prediction (\u03BCM)', fontweight='bold')
+    plt.xticks([0.00, 0.25, 0.50, 0.75, 1.00, 1.25, 1.50])
+    plt.title('Parity plot for P$_1$', fontweight='bold') # Note: change as needed
+    plt.savefig(f'{lname[0]}_parityplot.png', format='png', bbox_inches='tight', dpi=300)
     plt.savefig(f'{lname[0]}_parityplot.eps', format='eps', bbox_inches='tight') # saving as a vector plot
 
 
