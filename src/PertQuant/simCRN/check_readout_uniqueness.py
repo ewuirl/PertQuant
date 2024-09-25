@@ -1,3 +1,5 @@
+import numpy as np 
+
 def get_pert_assoc_matrix(assoc_matrix, D, T):
     '''get_pert_assoc_matrix(assoc_matrix, D, T)
 
@@ -104,3 +106,11 @@ def check_readout_connectivity(assoc_matrix, D, T):
             else:
                 pass
         return np.all(connected_readout)
+
+def generate_matrix(min_K, max_K, D,B,T):
+    num_species = D+B+T
+    # Generate array of random ints
+    rand_int_array = rng.integers(min_K, high=max_K, \
+        size=(num_species,num_species), endpoint=True)
+    # Make the matrix symmetric
+    return np.triu(rand_int_array)+np.transpose(np.triu(rand_int_array,k=1))

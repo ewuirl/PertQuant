@@ -1,0 +1,10 @@
+[build-system]
+requires = [
+    "setuptools>=61.0", 
+    "pandas", 
+    "numpy",
+    "scipy",
+    "sklearn",
+    "beepy",
+    "jellyfish"]
+build-backend = "setuptools.build_meta"
