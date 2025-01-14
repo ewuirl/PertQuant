@@ -60,7 +60,7 @@ def read_detailed_eq_data_file(file_name):
             
     return settings_dict
 
-def plot_raw_data(settings_dict, title, y_title, save_file='', save=True):
+def plot_raw_data(settings_dict, title, y_title, save_file='', save=True, xmax=1.05):
     L = settings_dict['L']
     N = settings_dict['N']
     
@@ -75,7 +75,7 @@ def plot_raw_data(settings_dict, title, y_title, save_file='', save=True):
                            color='skyblue', alpha=0.5)
             ax[i,j].set_ylabel(f"$T_{i+1}$"+ " initial conc.")
             ax[i,j].set_xlabel(f"$D_{j+1}$"+ " measured conc.")
-            ax[i,j].set_xlim(left=0,right=1.05)
+            ax[i,j].set_xlim(left=0,right=xmax)
             ax[i,j].set_ylim(bottom=0,top=2.1)
     fig.suptitle(title, y=y_title)
     if save and len(save_file)>0:
@@ -131,8 +131,8 @@ def get_partitioned_data(D_data, T_data, dataset_csv):
         data_dict[column_key]=(D_subset, T_subset)
     return data_dict
 
-def save_grid_search_results(results_df, index, grid_search, dataset_size, refit, \
-case, model_type, scoring_list, save_folder=''):
+def save_grid_search_results(results_df, index, grid_search, dataset_size, refit, 
+    N, M, L, case, model_type, scoring_list, save_folder=''):
     if len(save_folder) > 0:
         save_folder=f'{save_folder}/'
     # Save info about the best model to the dataframe
@@ -144,14 +144,14 @@ case, model_type, scoring_list, save_folder=''):
         results_df.loc[index,column_name]=grid_search.best_params_[param]
     
     # Save refitted model with best parameters
-    with open(f'{save_folder}2-2-2_{case}_{model_type}_{dataset_size}.pkl','wb') as model_file:
+    with open(f'{save_folder}{N}-{M}-{L}_{case}_{model_type}_{dataset_size}.pkl','wb') as model_file:
         pickle.dump(grid_search.best_estimator_, model_file)
     print(f"Model refit time: {grid_search.refit_time_}")
     results_df.loc[index,'refit_time']= grid_search.refit_time_
     
     # Save grid search cross validation results
     cv_results_df = pd.DataFrame(grid_search.cv_results_)
-    cv_results_df.to_csv(f'{save_folder}2-2-2_{case}_cv_results_{model_type}_{dataset_size}.csv')
+    cv_results_df.to_csv(f'{save_folder}{N}-{M}-{L}_{case}_cv_results_{model_type}_{dataset_size}.csv')
     best_model = cv_results_df[cv_results_df[f'rank_test_{refit}']==1]
     
     grid_metric_list = ['mean','std','rank']
@@ -278,7 +278,7 @@ def compare_alt_model(results_df, alt_model_df):
                 alt_model_df.loc[index,f'better_{set_type}_mean_absolute_error'] = False
 
 def plot_true_vs_pred(T_true, T_pred, Cmin, Cmax, title, save_file='', max_cols=4, \
-    save=True, col_scaler=5, row_scaler=5, color='cadetblue', alpha=0.5):
+    save=True, col_scaler=5, row_scaler=5, color='royalblue', alpha=0.5):
     L = np.shape(T_true)[1]
     # Figure size of plot
     if L <= max_cols:
@@ -324,7 +324,7 @@ def plot_true_vs_pred(T_true, T_pred, Cmin, Cmax, title, save_file='', max_cols=
     return (fig, ax)
 
 def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
-    max_cols=4, save=True, col_scaler=6.5, row_scaler=5, color='cadetblue'):
+    max_cols=4, save=True, col_scaler=6.5, row_scaler=5, color='royalblue'):
     L = np.shape(T_true)[1]
     # Figure size of plot
     if L <= max_cols:
@@ -342,7 +342,7 @@ def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
             ax[i].scatter(T_true[:,i],T_true[:,i]-T_pred[:,i], alpha=0.5, \
                 marker='.', color=color)
             ax[i].plot([Cmin, Cmax], [0, 0], color='k', linestyle=(0,(10,5)))
-            ax[i].set_xlabel(f'True $T_{i}$')
+            ax[i].set_xlabel(f'True $T_{i+1}$')
             ax[i].set_ylabel(f'Residuals (True-Predicted $T_{i}$)')
             ylim_array[i,:]=ax[i].get_ylim()
         for i in range(L):
@@ -354,7 +354,7 @@ def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
             ax[row,col].scatter(T_true[:,i],T_true[:,i]-T_pred[:,i], alpha=0.5, \
                 marker='.', color=color)
             ax[row,col].plot([Cmin, Cmax], [0, 0], color='k', linestyle=(0,(10,5)))
-            ax[row,col].set_xlabel(f'True $T_{i}$')
+            ax[row,col].set_xlabel(f'True $T_{i+1}$')
             ax[row,col].set_ylabel(f'Residuals (True-Predicted $T_{i}$)')
             ylim_array[i,:]=ax[row,col].get_ylim()
         for i in range(L):
@@ -371,22 +371,26 @@ def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
     return (fig, ax)
 
 def plot_metric_summary(results_df, case, model_type, metric, save_file, width=8, \
-    height=6, save=True, xscale='linear', train_color='cadetblue', \
-    test_color='darkseagreen', cv_color='gray', cv_alpha=0.5):
+    height=6, save=True, xscale='log', train_color='royalblue', \
+    test_color='orange', cv_color='gray', alpha=0.75, std_err=True):
     metric = metric.lstrip('neg_')
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE'}
 
     dataset_size_array = results_df['dataset_size'].to_numpy()
     mean_cv_metric = results_df[f'mean_test_{metric}'].to_numpy()
     std_cv_metric = results_df[f'std_test_{metric}'].to_numpy()
+    if std_err:
+        # use std error of the mean
+        std_cv_metric = std_cv_metric/np.sqrt(5) 
     train_metric = results_df[f'train_{metric}'].to_numpy()
     test_metric = results_df[f'test_{metric}'].to_numpy()
         
     fig, ax = plt.subplots(figsize=(width, height))
     ax.errorbar(dataset_size_array, mean_cv_metric, yerr=std_cv_metric, label='5-fold CV Mean', \
-                fmt='.', capsize=3, color=cv_color, zorder=1, alpha=cv_alpha)
-    ax.scatter(dataset_size_array, train_metric, label='Train', marker= '.', color=train_color)
-    ax.scatter(dataset_size_array, test_metric, label='Test', marker= '.', color=test_color)
+                fmt='.', capsize=3, color=cv_color, zorder=1, alpha=alpha, linestyle='-')
+    ax.plot(dataset_size_array, train_metric, label='Train', marker= '.', linestyle='dashed', alpha=alpha, \
+            color=train_color)
+    ax.plot(dataset_size_array, test_metric, label='Test', marker= '.', alpha=alpha, color=test_color)
     ax.legend(loc='best')
     if metric=='r2':
         ax.plot([0,max(dataset_size_array)], [1,1], color='k', linestyle=(0,(10,5)),zorder=0)
@@ -408,8 +412,8 @@ def plot_metric_summary(results_df, case, model_type, metric, save_file, width=8
     return (fig, ax)
 
 def plot_metric_best_vs_alt(results_df, alt_model_df, case, model_type, metric, \
-    save_file, width=8,height=6, save=True, xscale='linear', \
-    train_color='cadetblue', test_color='darkseagreen', cv_color='gray'):
+    save_file, width=8,height=6, save=True, xscale='log', \
+    train_color='royalblue', test_color='orange', alpha=0.75):
     metric = metric.lstrip('neg_')
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE'}
 
@@ -421,10 +425,14 @@ def plot_metric_best_vs_alt(results_df, alt_model_df, case, model_type, metric, 
     alt_test_metric = alt_model_df[f'test_{metric}'].to_numpy()
         
     fig, ax = plt.subplots(figsize=(width, height))
-    ax.scatter(dataset_size_array, train_metric, label='Train', marker= '.', color=train_color)
-    ax.scatter(dataset_size_array, test_metric, label='Test', marker= '.', color=test_color)
-    ax.scatter(alt_dataset_size_array, alt_train_metric, label='Alt Train', marker= '*', color=train_color)
-    ax.scatter(alt_dataset_size_array, alt_test_metric, label='Alt Test', marker= '*', color=test_color)
+    ax.plot(dataset_size_array, train_metric, label='Train', marker= '.', \
+        linestyle='dashed', color=train_color, alpha=alpha)
+    ax.plot(dataset_size_array, test_metric, label='Test', marker= '.', \
+        color=test_color, alpha=alpha)
+    ax.scatter(alt_dataset_size_array, alt_train_metric, label='Alt Train', \
+        marker= '*', color=train_color, alpha=alpha)
+    ax.scatter(alt_dataset_size_array, alt_test_metric, label='Alt Test',
+        marker= '*', color=test_color, alpha=alpha)
     ax.legend(loc='best')
     if metric=='r2':
         ax.plot([0,max(dataset_size_array)], [1,1], color='k', linestyle=(0,(10,5)), zorder=0)

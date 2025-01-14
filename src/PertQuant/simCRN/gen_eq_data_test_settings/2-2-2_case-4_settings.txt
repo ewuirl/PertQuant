@@ -1,0 +1,19 @@
+N = 2
+M = 2
+L = 2
+N_runs = 10
+Cmin = 0
+Cmax = 2
+Ai_array
+1 1
+Bi_array
+1 1
+KAB_array
+1 0
+0 1
+KBC_array
+1 0
+0 1
+KAC_array
+1 0
+0 1

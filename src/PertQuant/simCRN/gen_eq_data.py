@@ -54,7 +54,7 @@ def gen_Am(x_array, Cmin, Cmax, N_runs, *args):
         Am = calc_A_measured(x_final, *run_args)
 
         Ci_all_array[i,:] = Ci_array
-        Am_array[i] = Am
+        Am_array[i,:] = Am
 
     return(Ci_all_array, Am_array)
 
@@ -125,24 +125,21 @@ def compose_association_array(N, M, L, KAB_array, KBC_array, KAC_array, KAA_arra
     
     # Set AA in-set interactions
     if len(KAA_array)> 0:
-        for i in range(N):
-            association_array[i,i:N] = KAA_array[i]
+        association_array[:N,:N] = KAA_array
     else:
         pass
     # Set BB in-set interactions
-    if len(KBB_array)> 0:
-        for i in range(M):
-            association_array[N+i,N+i:N+M] = KBB_array[i]
+    if len(KBB_array)> 0:    
+        association_array[N:N+M,N:N+M] = KBB_array
     else:
         pass        
     # Set CC in-set interactions
     if len(KCC_array)> 0:
-        for i in range(L):
-            association_array[N+M+i,N+M+i:N+M+L] = KCC_array[i]
+        association_array[N+M:,N+M:] = KCC_array
     else:
         pass
     # Make array symmetric
-    association_array += np.triu(association_array,k=1).transpose()
+    association_array = np.triu(association_array)+np.triu(association_array,k=1).transpose()
     return association_array
 
 def gen_detailed_eq_data_file(file_name, Ci_all_array, Am_array, Cmin, Cmax, \
@@ -177,9 +174,9 @@ def gen_detailed_eq_data_file(file_name, Ci_all_array, Am_array, Cmin, Cmax, \
         write_array(save_file, 'Ai array', Ai_array)
         write_array(save_file, 'Bi array', Bi_array)
         # Save the association constants
-        associaton_array = compose_association_array(N, M, L, KAB_array, \
+        association_array = compose_association_array(N, M, L, KAB_array, \
             KBC_array, KAC_array, KAA_array, KBB_array, KCC_array)
-        write_array(save_file, 'Association array', associaton_array)
+        write_array(save_file, 'Association array', association_array)
 
         # Write the data to the file
         save_file.write('\n# \n# Data')
@@ -242,7 +239,7 @@ def gen_Ap(x_array, x_array_C, Cmin, Cmax, N_runs, *args, verbose=True,
         Ci_array = gen_Ci_array(L, Cmin, Cmax)
 
         # Make new args with the
-        run_args_C = args[:3] + (Ci_array,) + args[4:]
+        run_args_C = args[:3] + (Ci_array,) + args[3:]
     
         bounds_tuple_C = gen_bounds(*run_args_C)
 
@@ -260,9 +257,9 @@ def gen_Ap(x_array, x_array_C, Cmin, Cmax, N_runs, *args, verbose=True,
         # Add the concentrations to the storage arrays
         Ci_all_array[i,:] = Ci_array
         if measured:
-            Ap_array[i] = Am_C
+            Ap_array[i,:] = Am_C
         else:
             # Calculate the perturbation
             Ap = Am_C - Am
-            Ap_array[i] = Ap
+            Ap_array[i,:] = Ap
     return(Ci_all_array, Ap_array)
