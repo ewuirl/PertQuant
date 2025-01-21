@@ -86,16 +86,15 @@ def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
 
     return(Ci_array, A_measured)    
 
-if __name__ == '__main__':
+def gen_eq_data_parallel_main():
     rand.seed()
     start = time.perf_counter()
 
     # Argument parser
     parser = argparse.ArgumentParser(description='Generates eq_data ')    
     parser.add_argument('settings_file', type=str, help='The settings input file.')
-    parser.add_argument('--cwd', type=str, help='The current working directory')
     parser.add_argument('--save_folder', type=str, help='The path to the folder \
-        to save data to. Defaults to the folder of the input file.')
+        to save data to. Defaults to current working directory')
     parser.add_argument('--quiet', type=int, help='Verbosity level. 0 for settings \
         and timing. 1 for no commandline output. Defaults to 0.')
     parser.add_argument('--time_file', type=str, help='File to append simulation time \
@@ -107,18 +106,12 @@ if __name__ == '__main__':
     settings_file_path, settings_file_name = os.path.split(settings_file)
     # Get save file name
     save_file_name = settings_file_name.removesuffix('_settings.txt')
-    # Get current working directory
-    if args.cwd:
-        cwd = args.cwd 
     # Use provided save folder
     if args.save_folder:
         save_folder = args.save_folder
     # Use the folder of the input file
     else:
-        if args.cwd:
-            save_folder = cwd
-        else:
-            save_folder = settings_file_path
+        save_folder = os.getcwd()
     if args.quiet:
         quiet = args.quiet
     else:
@@ -126,11 +119,9 @@ if __name__ == '__main__':
 
     if quiet==0:
         print(f'Reading in settings file {settings_file_name}')
+    
     # Read in settings
-    if settings_file_path == "" and args.cwd:
-        settings_dict = read_eq_data_settings(f'{cwd}/{settings_file}', quiet=quiet)
-    else:    
-        settings_dict = read_eq_data_settings(settings_file, quiet=quiet)
+    settings_dict = read_eq_data_settings(settings_file, quiet=quiet)
     
     # Unpack settings
     settings = settings_dict.keys()
@@ -212,3 +203,5 @@ if __name__ == '__main__':
     if quiet==0:
         print(f"Time elapsed: {end-start} second(s)")
 
+if __name__ == '__main__':
+    gen_eq_data_parallel_main()

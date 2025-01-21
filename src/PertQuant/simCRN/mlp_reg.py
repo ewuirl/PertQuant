@@ -103,7 +103,7 @@ def mlp_reg_main():
     # Save the dataset indices
     full_set_size = np.shape(A_out_array)[0]
     train_set_size = int(0.8*full_set_size)
-    dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100]
+    dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50, 25]
     data_set_df = pd.DataFrame(data=np.zeros((np.shape(A_out_array)[0], \
         len(dataset_size_list)+1), dtype='int'), \
     columns=["test_set"]+dataset_size_list)
@@ -121,7 +121,7 @@ def mlp_reg_main():
             train_array, test=False)
         D_train_list.append(D_train)
         T_train_list.append(T_train)
-    data_set_df.to_csv(f'{save_folder}/{N}-{M}-{L}_{case}_dataset_partitions.csv')
+    data_set_df.to_csv(f'{parent_folder}/{N}-{M}-{L}_{case}_dataset_partitions.csv')
 
     # # # MLP regression
     # # Hyperparameter optimization
@@ -184,7 +184,7 @@ def mlp_reg_main():
 
     # Save the results dataframe
     print('Saving results to csv')
-    results_df.to_csv(f'{save_folder}/{N}-{M}-{L}_{case}_results_summary_{model_type}.csv')
+    results_df.to_csv(f'{parent_folder}/{N}-{M}-{L}_{case}_results_summary_{model_type}.csv')
 
     # # Look at the MAE rank 1 model
     # if results_df.loc[i,'rank_test_mean_absolute_error'] != 1:

@@ -303,7 +303,7 @@ def plot_true_vs_pred(T_true, T_pred, Cmin, Cmax, title, save_file='', max_cols=
             ax[i].set_ylim(bottom=min(ylim_array[:,0]),top=max(ylim_array[:,1]))
     else:
         for i in range(L):
-            row = math.floor(i)
+            row = math.floor(i/max_cols)
             col = i % max_cols
             ax[row,col].scatter(T_true[:,i],T_pred[:,i], alpha=alpha, marker='.', color=color)
             ax[row,col].plot([Cmin, Cmax], [Cmin, Cmax], color='k', linestyle=(0,(10,5)))
@@ -311,7 +311,7 @@ def plot_true_vs_pred(T_true, T_pred, Cmin, Cmax, title, save_file='', max_cols=
             ax[row,col].set_ylabel(f'Predicted $T_{i+1}$')
             ylim_array[i,:]=ax[row,col].get_ylim()
         for i in range(L):
-            row = math.floor(i)
+            row = math.floor(i/max_cols)
             col = i % max_cols
             ax[row,col].set_ylim(bottom=min(ylim_array[:,0]),top=max(ylim_array[:,1]))
     fig.suptitle(title)
@@ -349,7 +349,7 @@ def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
             ax[i].set_ylim(bottom=min(ylim_array[:,0]),top=max(ylim_array[:,1]))
     else:
         for i in range(L):
-            row = math.floor(i)
+            row = math.floor(i/max_cols)
             col = i % max_cols
             ax[row,col].scatter(T_true[:,i],T_true[:,i]-T_pred[:,i], alpha=0.5, \
                 marker='.', color=color)
@@ -358,7 +358,7 @@ def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
             ax[row,col].set_ylabel(f'Residuals (True-Predicted $T_{i}$)')
             ylim_array[i,:]=ax[row,col].get_ylim()
         for i in range(L):
-            row = math.floor(i)
+            row = math.floor(i/max_cols)
             col = i % max_cols
             ax[row,col].set_ylim(bottom=min(ylim_array[:,0]),top=max(ylim_array[:,1]))
     fig.suptitle(title)
