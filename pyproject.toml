@@ -4,6 +4,7 @@ requires = [
     "pandas", 
     "numpy",
     "scipy",
-    "beepy",
+    "matplotlib",
+    "scikit-learn"
     "jellyfish"]
 build-backend = "setuptools.build_meta"
