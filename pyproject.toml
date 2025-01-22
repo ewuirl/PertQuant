@@ -6,6 +6,6 @@ requires = [
     "numpy",
     "scipy",
     "matplotlib",
-    "scikit-learn"
+    "scikit-learn",
     "jellyfish"]
 build-backend = "setuptools.build_meta"
