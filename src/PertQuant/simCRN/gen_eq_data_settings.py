@@ -157,45 +157,45 @@ if __name__ == '__main__':
     case_title_list = []
     folder_list = []
 
-    # # Case 1
-    # KAC_vals = np.linspace(1000, 2000, L)
-    # K_array_dict['KAC_array'] = gen_KAC_array_case_1_all(N, L, KAC_vals)
-    # # base case
-    # KBC_list.append(np.zeros((M,L)))
-    # case_title_list.append('Case 1')
-    # folder_list.append(f'{N}-{M}-{L}_case-1')
-    # # KBC = 1, 1 distinct
-    # KBC = 1
-    # distinct = 1
-    # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 1a, KBC = 1, 1 distinct')
-    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-1_1d')
-    # # KBC = 1, all distinct
-    # distinct = 4
-    # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 1a, KBC = 1, all distinct')
-    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-1_all')
-    # # KBC = 1, 5 distinct
-    # distinct = 5
-    # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 1a, KBC = 1, all KBC')
-    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-1_5d')
-    # # KBC = 100, 1 distinct
-    # KBC = 100
-    # distinct = 1
-    # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 1a, KBC = 100, 1 distinct')
-    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-100_1d')
-    # # KBC = 100, all distinct
-    # distinct = 4
-    # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 1a, KBC = 1, all distinct')
-    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-100_all')
-    # # KBC = 100, 5 distinct
-    # distinct = 5
-    # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 1a, KBC = 100, all KBC')
-    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-100_5d')
+    # Case 1
+    KAC_vals = np.linspace(1000, 2000, L)
+    K_array_dict['KAC_array'] = gen_KAC_array_case_1_all(N, L, KAC_vals)
+    # base case
+    KBC_list.append(np.zeros((M,L)))
+    case_title_list.append('Case 1')
+    folder_list.append(f'{N}-{M}-{L}_case-1')
+    # KBC = 1, 1 distinct
+    KBC = 1
+    distinct = 1
+    KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
+    case_title_list.append('Case 1a, KBC = 1, 1 distinct')
+    folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-1_1d')
+    # KBC = 1, all distinct
+    distinct = L-1
+    KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
+    case_title_list.append('Case 1a, KBC = 1, all distinct')
+    folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-1_all')
+    # KBC = 1, 5 distinct
+    distinct = L
+    KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
+    case_title_list.append('Case 1a, KBC = 1, all KBC')
+    folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-1_{L}d')
+    # KBC = 100, 1 distinct
+    KBC = 100
+    distinct = 1
+    KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
+    case_title_list.append('Case 1a, KBC = 100, 1 distinct')
+    folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-100_1d')
+    # KBC = 100, all distinct
+    distinct = L-1
+    KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
+    case_title_list.append('Case 1a, KBC = 1, all distinct')
+    folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-100_all')
+    # KBC = 100, 5 distinct
+    distinct = L
+    KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
+    case_title_list.append('Case 1a, KBC = 100, all KBC')
+    folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-100_{L}d')
 
     # # # Case 2 
     # KAC_vals = np.linspace(1,2,L)
@@ -212,15 +212,15 @@ if __name__ == '__main__':
     # case_title_list.append('Case 2a, KBC = 1, 1 distinct')
     # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-1_1d')
     # # KBC = 1, all distinct
-    # distinct = 4
+    # distinct = L-1
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
     # case_title_list.append('Case 2a, KBC = 1, all distinct')
     # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-1_all')
-    # # KBC = 1, 5 distinct
-    # distinct = 5
+    # # KBC = 1, all L distinct
+    # distinct = L
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
     # case_title_list.append('Case 2a, KBC = 1, all KBC')
-    # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-1_5d')
+    # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-1_{L}d')
     # # KBC = 100, 1 distinct
     # KBC = 100
     # distinct = 1
@@ -228,15 +228,15 @@ if __name__ == '__main__':
     # case_title_list.append('Case 2a, KBC = 100, 1 distinct')
     # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-100_1d')
     # # KBC = 100, all distinct
-    # distinct = 4
+    # distinct = L-1
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
     # case_title_list.append('Case 2a, KBC = 100, all distinct')
     # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-100_all')
-    # # KBC = 100, all distinct
-    # distinct = 5
+    # # KBC = 100, all L distinct
+    # distinct = L
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
     # case_title_list.append('Case 2a, KBC = 100, all KBC')
-    # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-100_5d')
+    # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-100_{L}d')
 
     # # # Case 3
     # row = np.linspace(1000,2000,L)
@@ -258,15 +258,15 @@ if __name__ == '__main__':
     # case_title_list.append('Case 3b, KBC = 1, 1 distinct')
     # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-1_1d')
     # # KBC = 1, all distinct
-    # distinct = 4
+    # distinct = L-1
     # KBC_list.append(gen_KBC_array_case_b(M, distinct, L, KBC))
     # case_title_list.append('Case 3b, KBC = 1, all distinct')
     # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-1_all')
     # # KBC = 1, all KBC
-    # distinct = 5
+    # distinct = L
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
     # case_title_list.append('Case 3b, KBC = 1, all KBC')
-    # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-1_5d')
+    # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-1_{L}d')
     # # KBC = 100
     # KBC = 100
     # distinct = 1
@@ -279,40 +279,51 @@ if __name__ == '__main__':
     # case_title_list.append('Case 3b, KBC = 100, 1 distinct')
     # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-100_1d')
     # # KBC = 100, all distinct
-    # distinct = 4
+    # distinct = L-1
     # KBC_list.append(gen_KBC_array_case_b(M, distinct, L, KBC))
     # case_title_list.append('Case 3b, KBC = 100, all distinct')
     # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-100_all')
     # # KBC = 100, all KBC
-    # distinct = 5
+    # distinct = L
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
     # case_title_list.append('Case 3b, KBC = 100, all KBC')
-    # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-100_5d')
+    # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-100_{L}d')
 
     # # # Case 4
     # K_array_dict['KAC_array'] = gen_KAC_array_case_4(N, L, KAC)
     # case_title = 'Case 4'
     # folder = f'{N}-{M}-{L}_case-4'
 
-    # # Case 5
-    K_array_dict['KAC_array'] = np.ones((N,L))*1000
-    scale_arr = np.array([1,2.5,5])
-    order_arr = np.logspace(start=-2,stop=3, num=6)
-    KBC_vals = np.array([0.75])
-    for order in order_arr:
-        KBC_vals = np.concatenate((KBC_vals, order*scale_arr))
-    KBC_vals = np.concatenate((KBC_vals,np.array([10000])))
-    distinct=4
-    for KBC in KBC_vals:
-        KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-        if np.floor(KBC)==KBC:
-            case_title = f'Case 5 (K={int(KBC)})'
-            folder =f'{N}-{M}-{L}_case-5_K-{int(KBC)}'
-        else:
-            case_title = f'Case 5 (K={KBC})'
-            folder=f'{N}-{M}-{L}_case-5_K-{KBC}'.replace('.','-')
-        case_title_list.append(case_title)
-        folder_list.append(folder)
+    # # # Case 5
+    # K_array_dict['KAC_array'] = np.ones((N,L))*1000
+    # scale_arr = np.array([1,2.5,5])
+    # order_arr = np.logspace(start=-2,stop=3, num=6)
+    # KBC_vals = np.array([0.75])
+    # for order in order_arr:
+    #     KBC_vals = np.concatenate((KBC_vals, order*scale_arr))
+    # KBC_vals = np.concatenate((KBC_vals,np.array([10000])))
+    # distinct=L-1
+    # for KBC in KBC_vals:
+    #     KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
+    #     if np.floor(KBC)==KBC:
+    #         case_title = f'Case 5 (K={int(KBC)})'
+    #         folder =f'{N}-{M}-{L}_case-5_K-{int(KBC)}'
+    #     else:
+    #         case_title = f'Case 5 (K={KBC})'
+    #         folder=f'{N}-{M}-{L}_case-5_K-{KBC}'.replace('.','-')
+    #     case_title_list.append(case_title)
+    #     folder_list.append(folder)
+    # distinct=L
+    # for KBC in KBC_vals:
+    #     KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
+    #     if np.floor(KBC)==KBC:
+    #         case_title = f'Case 5c (K={int(KBC)})'
+    #         folder =f'{N}-{M}-{L}_case-5c_K-{int(KBC)}'
+    #     else:
+    #         case_title = f'Case 5 (K={KBC})'
+    #         folder=f'{N}-{M}-{L}_case-5c_K-{KBC}'.replace('.','-')
+    #     case_title_list.append(case_title)
+    #     folder_list.append(folder)
 
     # # # Case 5b
     # Ai_array = np.ones(N)*2
