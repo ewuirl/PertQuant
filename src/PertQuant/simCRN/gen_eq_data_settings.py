@@ -198,14 +198,14 @@ if __name__ == '__main__':
     # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-100_5d')
 
     # # # Case 2 
-    # KAC_vals = np.linspace(1,2,5)
-    # column = np.linspace(100,1000,5)
+    # KAC_vals = np.linspace(1,2,L)
+    # column = np.linspace(100,1000,N)
     # K_array_dict['KAC_array'] = gen_KAC_array_case_2_all(N, L, column, KAC_vals)
     # # base case
     # KBC_list.append(np.zeros((M,L)))
     # case_title_list.append('Case 2')
     # folder_list.append(f'{N}-{M}-{L}_case-2')
-    # KBC = 1, 1 distinct
+    # # KBC = 1, 1 distinct
     # KBC = 1
     # distinct = 1
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
@@ -239,7 +239,7 @@ if __name__ == '__main__':
     # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-100_5d')
 
     # # # Case 3
-    # row = np.linspace(1000,2000,5)
+    # row = np.linspace(1000,2000,L)
     # K_array_dict['KAC_array'] = gen_KAC_array_case_3_all(N, L, row)
     # # base case
     # KBC_list.append(np.zeros((M,L)))
@@ -289,30 +289,30 @@ if __name__ == '__main__':
     # case_title_list.append('Case 3b, KBC = 100, all KBC')
     # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-100_5d')
 
-    # # Case 4
-    K_array_dict['KAC_array'] = gen_KAC_array_case_4(N, L, KAC)
-    case_title = 'Case 4'
-    folder = f'{N}-{M}-{L}_case-4'
+    # # # Case 4
+    # K_array_dict['KAC_array'] = gen_KAC_array_case_4(N, L, KAC)
+    # case_title = 'Case 4'
+    # folder = f'{N}-{M}-{L}_case-4'
 
-    # # # Case 5
-    # K_array_dict['KAC_array'] = np.ones((N,L))*1000
-    # scale_arr = np.array([1,2.5,5])
-    # order_arr = np.logspace(start=-2,stop=3, num=6)
-    # KBC_vals = np.array([0.75])
-    # # for order in order_arr:
-    # #     KBC_vals = np.concatenate((KBC_vals, order*scale_arr))
-    # # KBC_vals = np.concatenate((KBC_vals,np.array([10000])))
-    # distinct=4
-    # for KBC in KBC_vals:
-    #     KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    #     if np.floor(KBC)==KBC:
-    #         case_title = f'Case 5 (K={int(KBC)})'
-    #         folder =f'{N}-{M}-{L}_case-5_K-{int(KBC)}'
-    #     else:
-    #         case_title = f'Case 5 (K={KBC})'
-    #         folder=f'{N}-{M}-{L}_case-5_K-{KBC}'.replace('.','-')
-    #     case_title_list.append(case_title)
-    #     folder_list.append(folder)
+    # # Case 5
+    K_array_dict['KAC_array'] = np.ones((N,L))*1000
+    scale_arr = np.array([1,2.5,5])
+    order_arr = np.logspace(start=-2,stop=3, num=6)
+    KBC_vals = np.array([0.75])
+    for order in order_arr:
+        KBC_vals = np.concatenate((KBC_vals, order*scale_arr))
+    KBC_vals = np.concatenate((KBC_vals,np.array([10000])))
+    distinct=4
+    for KBC in KBC_vals:
+        KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
+        if np.floor(KBC)==KBC:
+            case_title = f'Case 5 (K={int(KBC)})'
+            folder =f'{N}-{M}-{L}_case-5_K-{int(KBC)}'
+        else:
+            case_title = f'Case 5 (K={KBC})'
+            folder=f'{N}-{M}-{L}_case-5_K-{KBC}'.replace('.','-')
+        case_title_list.append(case_title)
+        folder_list.append(folder)
 
     # # # Case 5b
     # Ai_array = np.ones(N)*2
@@ -338,23 +338,21 @@ if __name__ == '__main__':
     #     case_title_list.append(case_title)
     #     folder_list.append(folder)
 
-    # For single case
-    if folder not in os.listdir(save_folder):
-        os.mkdir(f'{save_folder}{sep}{folder}')
+    # # For single case
+    # if folder not in os.listdir(save_folder):
+    #     os.mkdir(f'{save_folder}{sep}{folder}')
     
-    file_name = f'{save_folder}{sep}{folder}{sep}{folder}'
-    write_settings_file(file_name, case_title, N, M, L, N_runs, Cmin, 
-        Cmax, Ai_array, Bi_array, K_array_dict)
+    # file_name = f'{save_folder}{sep}{folder}{sep}{folder}'
+    # write_settings_file(file_name, case_title, N, M, L, N_runs, Cmin, 
+    #     Cmax, Ai_array, Bi_array, K_array_dict)
 
-    # # For case variations
-    # for i in range(len(KBC_list)):
-    #     folder = folder_list[i]
-    #     if folder not in os.listdir(save_folder):
-    #         os.mkdir(f'{save_folder}/{folder}')
-    #     K_array_dict['KBC_array'] = KBC_list[i]
-    #     case_title = case_title_list[i]
-    #     file_name = f'{save_folder}/{folder}/{folder}'
-    #     write_settings_file(file_name, case_title, N, M, L, N_runs, Cmin, 
-    #         Cmax, Ai_array, Bi_array, K_array_dict)
-
-
+    # For case variations
+    for i in range(len(KBC_list)):
+        folder = folder_list[i]
+        if folder not in os.listdir(save_folder):
+            os.mkdir(f'{save_folder}{sep}{folder}')
+        K_array_dict['KBC_array'] = KBC_list[i]
+        case_title = case_title_list[i]
+        file_name = f'{save_folder}{sep}{folder}{sep}{folder}'
+        write_settings_file(file_name, case_title, N, M, L, N_runs, Cmin, 
+            Cmax, Ai_array, Bi_array, K_array_dict)

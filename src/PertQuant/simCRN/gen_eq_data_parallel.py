@@ -5,6 +5,7 @@ import random as rand
 import math
 import os
 import argparse
+import platform
 from scipy.optimize import minimize
 from PertQuant.simCRN.read_gen_eq_data_settings import read_array
 from PertQuant.simCRN.read_gen_eq_data_settings import read_eq_data_settings
