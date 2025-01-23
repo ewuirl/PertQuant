@@ -7,6 +7,7 @@ import matplotlib as mpl
 import pandas as pd
 import pickle
 import argparse
+import platform
 from contextlib import redirect_stdout
 from PertQuant.simCRN.multivariate_reg_v2 import read_detailed_eq_data_file
 from PertQuant.simCRN.multivariate_reg_v2 import plot_raw_data
@@ -48,6 +49,12 @@ def mlp_reg_main():
         # and timing. 1 for no commandline output. Defaults to 0.')
     args = parser.parse_args()
 
+    # Check the platform
+    if platform.system() == 'Windows':
+        sep = '\\'
+    else:
+        sep = '/'
+
     # Parse the arguments
     data_file = args.data_file
     data_file_path, data_file_name = os.path.split(data_file)
@@ -82,7 +89,7 @@ def mlp_reg_main():
     print('Making folder for results')
     model_type = 'MLP'
     folder = f'{case}_{model_type}'
-    save_folder = f'{parent_folder}/{folder}'
+    save_folder = f'{parent_folder}{sep}{folder}'
     if folder not in os.listdir(parent_folder):
         os.mkdir(save_folder)
 
@@ -121,7 +128,7 @@ def mlp_reg_main():
             train_array, test=False)
         D_train_list.append(D_train)
         T_train_list.append(T_train)
-    data_set_df.to_csv(f'{parent_folder}/{N}-{M}-{L}_{case}_dataset_partitions.csv')
+    data_set_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_dataset_partitions.csv')
 
     # # # MLP regression
     # # Hyperparameter optimization
@@ -184,7 +191,7 @@ def mlp_reg_main():
 
     # Save the results dataframe
     print('Saving results to csv')
-    results_df.to_csv(f'{parent_folder}/{N}-{M}-{L}_{case}_results_summary_{model_type}.csv')
+    results_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_results_summary_{model_type}.csv')
 
     # # Look at the MAE rank 1 model
     # if results_df.loc[i,'rank_test_mean_absolute_error'] != 1:

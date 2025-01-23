@@ -100,6 +100,12 @@ def gen_eq_data_parallel_main():
     parser.add_argument('--time_file', type=str, help='File to append simulation time \
         data to.')
     args = parser.parse_args()
+
+    # Check the platform
+    if platform.system() == 'Windows':
+        sep = '\\'
+    else:
+        sep = '/'
     
     # Parse the arguments
     settings_file = args.settings_file 
@@ -187,7 +193,7 @@ def gen_eq_data_parallel_main():
     # Save results
     if quiet==0:
         print('Saving results.')
-    gen_detailed_eq_data_file(f'{save_folder}/{save_file_name}_data.txt', Ci_all_array, \
+    gen_detailed_eq_data_file(f'{save_folder}{sep}{save_file_name}_data.txt', Ci_all_array, \
         Am_array, Cmin, Cmax, Bi_array, Ai_array, KAB_array, KBC_array, \
         KAC_array, KAA_array=KAA_array, KBB_array=KBB_array, KCC_array=KCC_array)
 
