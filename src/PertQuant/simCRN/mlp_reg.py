@@ -133,8 +133,11 @@ def mlp_reg_main():
     # # # MLP regression
     # # Hyperparameter optimization
     pipeline_MLP = Pipeline([('scaler', StandardScaler()), ('model', MLPRegressor(max_iter=max_iter))])
-    parameters_MLP = {'model__hidden_layer_sizes': [(5,),(10,),(15,)], \
-    'model__activation': ['relu','tanh','logistic'], \
+    parameters_MLP = {'model__activation': ['relu','tanh','logistic'], \
+    # 2-2-2
+    # 'model__hidden_layer_sizes': [(5,),(10,),(15,)], \
+    # 10-10-10
+    'model__hidden_layer_sizes': [(10,),(15,),(20,),(25,)], \
     'model__solver': ['lbfgs', 'adam'], \
     'model__alpha': [0.0001, 0.0005, 0.001, 0.005]}
     scoring_MLP = ['r2', 'neg_mean_absolute_error']
