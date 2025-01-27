@@ -14,7 +14,8 @@ from PertQuant.simCRN.gen_eq_data import compose_association_array
 from PertQuant.simCRN.gen_eq_data import write_array
 from PertQuant.simCRN.gen_eq_data import gen_detailed_eq_data_file
 from PertQuant.simCRN.equilibrium_v3 import ID_network_species_reactions
-from PertQuant.simCRN.equilibrium_v3 import gen_x_array
+from PertQuant.simCRN.equilibrium_v3 import gen_base_x_array
+from PertQuant.simCRN.equilibrium_v3 import fill_x_array
 from PertQuant.simCRN.equilibrium_v3 import gen_XY_bounds
 from PertQuant.simCRN.equilibrium_v3 import gen_AB_bounds
 from PertQuant.simCRN.equilibrium_v3 import add_C_bounds
@@ -55,8 +56,9 @@ def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
         KBB_nonzero, KCC_nonzero] where
         KXY_nonzero (tuple): a tuple of arrays of the indices of the nonzero 
             KXY_array values. 
-    ABC_guess (list): [A_guess, B_guess, C_guess] where
-        X_guess = Initial guesses for the final concentrations of X species.
+    ABC_guess (list): [A_guess, B_guess, C_reactions] where
+        X_guess (arr) = initial guesses for the final concentrations of X species.
+        C_reactions (arr) = the number of reactions Ci participates in.
     fixed_bounds (list): [A_B_bounds, AB_bounds, AA_bounds, BB_bounds] where
         A_B_bounds (list): a list of (min,max) concentration bound tuples for 
             {A} and {B} to use with Keq_fast in scipy.optimize.minimize.
@@ -81,7 +83,8 @@ def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
 
     # Generate the initial guess:
     if guess:
-        x_array = fill_x_array(N, M, L, x_array, ABC_guess, duplex_nonzero)
+        x_array = fill_x_array(N, M, L, x_array, Ci_array, ABC_guess, \
+            K_array_list, duplex_nonzero)
     else:
         pass
 
@@ -146,6 +149,10 @@ def gen_eq_data_parallel_main():
     else:
         method='SLSQP'
 
+    if args.guess:
+        guess = args.guess 
+    else:
+        guess = False
     
     # Read in settings
     settings_dict = read_eq_data_settings(settings_file, quiet=quiet)
@@ -191,11 +198,11 @@ def gen_eq_data_parallel_main():
 
     # Generate the fixed portion of the x_array initial guess
     if guess:
-        x_array, ABC_guess = gen_base_x_array(N, M, L, N_reactants, K_array_list, \
-            duplex_nonzero)
+        x_array, ABC_guess = gen_base_x_array(N, M, L, N_reactants, Ai_array, \
+            Bi_array, K_array_list, duplex_nonzero)
     else:
         x_array = np.zeros(N_reactants)
-        ABC_guess = [np.zeros(N), np.zeros(M). np.zeros(L)]
+        ABC_guess = [np.zeros(N), np.zeros(M), np.zeros(L)]
 
     # Compute Am
     if quiet==0:
@@ -219,7 +226,11 @@ def gen_eq_data_parallel_main():
     # Save results
     if quiet==0:
         print('Saving results.')
-    gen_detailed_eq_data_file(f'{save_folder}{sep}{save_file_name}_data.txt', Ci_all_array, \
+    if guess:
+        data_file_name = f'{save_folder}{sep}{save_file_name}_data_guess.txt'
+    else:
+        data_file_name = f'{save_folder}{sep}{save_file_name}_data.txt'
+    gen_detailed_eq_data_file(data_file_name, Ci_all_array, \
         Am_array, Cmin, Cmax, Bi_array, Ai_array, KAB_array, KBC_array, \
         KAC_array, KAA_array=KAA_array, KBB_array=KBB_array, KCC_array=KCC_array)
 
