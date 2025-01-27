@@ -132,7 +132,7 @@ def get_partitioned_data(D_data, T_data, dataset_csv):
     return data_dict
 
 def save_grid_search_results(results_df, index, grid_search, dataset_size, refit, 
-    N, M, L, case, model_type, scoring_list, save_folder=''):
+    N, M, L, case, model_type, scoring_list, save_folder='', suffix=''):
     if len(save_folder) > 0:
         save_folder=f'{save_folder}/'
     # Save info about the best model to the dataframe
@@ -144,14 +144,14 @@ def save_grid_search_results(results_df, index, grid_search, dataset_size, refit
         results_df.loc[index,column_name]=grid_search.best_params_[param]
     
     # Save refitted model with best parameters
-    with open(f'{save_folder}{N}-{M}-{L}_{case}_{model_type}_{dataset_size}.pkl','wb') as model_file:
+    with open(f'{save_folder}{N}-{M}-{L}_{case}_{model_type}_{dataset_size}{suffix}.pkl','wb') as model_file:
         pickle.dump(grid_search.best_estimator_, model_file)
     print(f"Model refit time: {grid_search.refit_time_}")
     results_df.loc[index,'refit_time']= grid_search.refit_time_
     
     # Save grid search cross validation results
     cv_results_df = pd.DataFrame(grid_search.cv_results_)
-    cv_results_df.to_csv(f'{save_folder}{N}-{M}-{L}_{case}_cv_results_{model_type}_{dataset_size}.csv')
+    cv_results_df.to_csv(f'{save_folder}{N}-{M}-{L}_{case}_cv_results_{model_type}_{dataset_size}{suffix}.csv')
     best_model = cv_results_df[cv_results_df[f'rank_test_{refit}']==1]
     
     grid_metric_list = ['mean','std','rank']

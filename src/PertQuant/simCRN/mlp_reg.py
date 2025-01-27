@@ -58,7 +58,8 @@ def mlp_reg_main():
     # Parse the arguments
     data_file = args.data_file
     data_file_path, data_file_name = os.path.split(data_file)
-    save_name = data_file_name.removesuffix('_data.txt')
+    save_name, remainder = data_file_name.split('_data')
+    suffix = remainder.removesuffix('.txt')
     if args.max_iter:
         max_iter = args.max_iter
     else:
@@ -80,15 +81,11 @@ def mlp_reg_main():
     Ci_array = settings_dict['Ci_array']
     case = save_name.removeprefix(f'{N}-{M}-{L}_')
 
-    # # Make a log file
-    # log_file_name = f'{save_name}_MLP_reg.log'
-    # log_file = open(log_file_name, 'w')
-    # log_file.close()
-
     # Make a folder for results
     print('Making folder for results')
     model_type = 'MLP'
-    folder = f'{case}_{model_type}'
+    folder = f'{case}_{model_type}{suffix}'
+    
     save_folder = f'{parent_folder}{sep}{folder}'
     if folder not in os.listdir(parent_folder):
         os.mkdir(save_folder)
@@ -99,8 +96,14 @@ def mlp_reg_main():
         # plotting settings
         mpl.rcParams['font.size']=18
         title=f"D=B=T={N} {case} Raw Data"
+        if N == 5:
+            y_raw_title = 0.92
+        elif N == 10:
+            y_raw_title = 0.89 
+        else:
+            y_raw_title = 0.9
         raw_data_plot = plot_raw_data(settings_dict, f"{N}-{M}-{L} {case} Raw Data", \
-            0.92, save=False)
+            y_raw_title, save=False)
         plt.show()
     else:
         pass
@@ -110,7 +113,10 @@ def mlp_reg_main():
     # Save the dataset indices
     full_set_size = np.shape(A_out_array)[0]
     train_set_size = int(0.8*full_set_size)
-    dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50, 25]
+    if N==2:
+        dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50, 25, 10]
+    else:
+        dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50, 25]
     data_set_df = pd.DataFrame(data=np.zeros((np.shape(A_out_array)[0], \
         len(dataset_size_list)+1), dtype='int'), \
     columns=["test_set"]+dataset_size_list)
@@ -128,24 +134,29 @@ def mlp_reg_main():
             train_array, test=False)
         D_train_list.append(D_train)
         T_train_list.append(T_train)
-    data_set_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_dataset_partitions.csv')
+    data_set_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_dataset_partitions{suffix}.csv')
 
     # # # MLP regression
     # # Hyperparameter optimization
     pipeline_MLP = Pipeline([('scaler', StandardScaler()), ('model', MLPRegressor(max_iter=max_iter))])
     parameters_MLP = {'model__activation': ['relu','tanh','logistic'], \
-    # 2-2-2
-    # 'model__hidden_layer_sizes': [(5,),(10,),(15,)], \
-    # 10-10-10
-    'model__hidden_layer_sizes': [(10,),(15,),(20,),(25,)], \
+    'model__hidden_layer_sizes': [(5,),(10,),(15,)], \
     'model__solver': ['lbfgs', 'adam'], \
     'model__alpha': [0.0001, 0.0005, 0.001, 0.005]}
+    if N == 5:
+        parameters_MLP['model__hidden_layer_sizes'] = [(5,),(10,),(15,),(20,)]
+    elif N == 10:
+        parameters_MLP['model__hidden_layer_sizes'] = [(10,),(15,),(20,),(25,)]
+    else:
+        pass
     scoring_MLP = ['r2', 'neg_mean_absolute_error']
     MLP_metrics = [r2_score, mean_absolute_error]
     refit_MLP='r2'
     combo_number_MLP = 1
+    print(f'Hidden layer sizes: {parameters_MLP['model__hidden_layer_sizes']}')
     for value_list in parameters_MLP.values():
         combo_number_MLP *= len(value_list)
+        print(f'Number of hyperparameter combinations: {combo_number_MLP}')
 
     # Create dataframe to store results
     grid_search_list = []
@@ -161,12 +172,15 @@ def mlp_reg_main():
     results_df['dataset_size'] = dataset_size_list
     # alt_model_df = pd.DataFrame(columns=results_columns)
 
+    # Create dataframe to store Ti-specific MAE
+    MAE_columns = ['dataset_size'] + [f'Train T{i+1}' for i in range(L)] + [f'Test T{i+1}' for i in range(L)]
+    MAE_df = pd.DataFrame(columns=MAE_columns)
+    MAE_df['dataset_size'] = dataset_size_list
+
     # Grid search 5 fold cross validation
     print('Performing grid search with 5 fold cross validation')
     for i, dataset_size in enumerate(dataset_size_list):
         print(f'Dataset size: {dataset_size}')
-        # with open(log_file_name, 'a') as log_file:
-        #     with redirect_stdout(log_file):
         grid_search_MLP = GridSearchCV(pipeline_MLP, param_grid=parameters_MLP, \
             verbose=3, scoring=scoring_MLP, refit=refit_MLP)
         grid_search_MLP.fit(D_train_list[i], T_train_list[i])
@@ -175,7 +189,7 @@ def mlp_reg_main():
         print('Saving grid search results')
         save_grid_search_results(results_df, i, grid_search_list[i], \
             dataset_size_list[i], refit_MLP, N, M, L, case, model_type, \
-            scoring_MLP, save_folder=save_folder)
+            scoring_MLP, save_folder=save_folder, suffix=suffix)
 
         # Predict with the best model
         print('Predicting with best fit model (R^2)')
@@ -192,9 +206,16 @@ def mlp_reg_main():
         add_predictions_to_df(results_df, i, test_metrics, time_array, scoring_MLP, \
             dataset_type='test')
 
+        # Store Ti-specific MAE
+        MAE_df.loc[i,'Train T1':f'Train T{L}'] = mean_absolute_error(T_train_list[i], \
+            pred_train, multioutput='raw_values')
+        MAE_df.loc[i,'Test T1':f'Test T{L}'] = mean_absolute_error(T_final_test, \
+            pred_test, multioutput='raw_values')
+
     # Save the results dataframe
     print('Saving results to csv')
-    results_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_results_summary_{model_type}.csv')
+    results_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_results_summary_{model_type}{suffix}.csv')
+    MAE_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_MAE_Ti_{model_type}{suffix}.csv')
 
     # # Look at the MAE rank 1 model
     # if results_df.loc[i,'rank_test_mean_absolute_error'] != 1:

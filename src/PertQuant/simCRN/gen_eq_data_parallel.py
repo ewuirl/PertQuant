@@ -240,7 +240,7 @@ def gen_eq_data_parallel_main():
     if args.time_file: 
         time_file = args.time_file.strip('"')
         with open(time_file,'a') as file:
-            file.write(f'\n{settings_file_name}\t{end-start}')
+            file.write(f'\n{data_file_name}\t{end-start}')
     else:
         pass
         
