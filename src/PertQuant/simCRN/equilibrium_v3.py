@@ -182,6 +182,51 @@ def ID_network_species_reactions(KAB_array, KBC_array, KAC_array, KAA_array, \
     
     return (ABC_connected, ABC_nonzero, duplex_nonzero, N_reactants)
 
+def gen_base_x_array(N, M, L, N_reactants, K_array_list, duplex_nonzero):
+    x_array = np.zeros(N_reactants)
+    A_reactions = 1+np.sum(K_array_list[0]>0,axis=1) + np.sum(K_array_list[2]>0,axis=1) + np.sum(K_array_list[3]>0,axis=1) 
+    B_reactions = 1+np.sum(K_array_list[0]>0,axis=0) + np.sum(K_array_list[1]>0,axis=1) + np.sum(K_array_list[4]>0,axis=1)
+    C_reactions = 1+np.sum(K_array_list[1]>0,axis=0) + np.sum(K_array_list[2]>0,axis=0) + np.sum(K_array_list[5]>0,axis=1)
+    
+    A_guess = np.divide(Ai_array, A_reactions)
+    B_guess = np.divide(Bi_array, B_reactions)
+    C_guess = np.divide(Ci_array, C_reactions)
+    ABC_guess = [A_guess, B_guess, C_guess]
+    
+    x_array[:N] = A_guess
+    x_array[N:N+M] = B_guess
+    x_array[N+M:N+M+L] = C_guess
+    index = N+M+L
+    for i, row in enumerate(duplex_nonzero[0][0]):
+        x_array[index] = min(A_guess[row], B_guess[duplex_nonzero[0][1][i]])
+        index += 1
+    # Skip BC array and AC_array
+    index += len(duplex_nonzero[1][0]) + len(duplex_nonzero[2][0])
+    for i, row in enumerate(duplex_nonzero[3][0]):
+        x_array[index] = min(A_guess[row], A_guess[duplex_nonzero[3][1][i]])
+        index += 1
+    for i, row in enumerate(duplex_nonzero[4][0]):
+        x_array[index] = min(B_guess[row], B_guess[duplex_nonzero[4][1][i]])
+        index += 1
+    return x_array, ABC_guess
+
+def fill_x_array(N, M, L, x_array, ABC_guess, duplex_nonzero):
+    x_copy = np.copy(x_array)
+    A_guess, B_guess, C_guess = ABC_guess
+    index = N+M+L+len(duplex_nonzero[0][0])
+    for i, row in enumerate(duplex_nonzero[1][0]):
+        x_copy[index] = min(B_guess[row], C_guess[duplex_nonzero[1][1][i]])
+        index += 1
+    for i, row in enumerate(duplex_nonzero[2][0]):
+        x_copy[index] = min(A_guess[row], C_guess[duplex_nonzero[2][1][i]])
+        index += 1
+    # Skip AA_array and BB_array
+    index += len(duplex_nonzero[3][0]) + len(duplex_nonzero[4][0])
+    for i, row in enumerate(duplex_nonzero[5][0]):
+        x_copy[index] = min(C_guess[row], C_guess[duplex_nonzero[5][1][i]])
+        index += 1          
+    return x_copy
+
 def gen_XY_bounds(Xi_array, Yi_array, KXY_nonzero):
     '''This function takes in arrays of initial concentrations for X and Y, and
     an array of the indices of the nonzero values of flattened KXY. It computes

@@ -14,6 +14,7 @@ from PertQuant.simCRN.gen_eq_data import compose_association_array
 from PertQuant.simCRN.gen_eq_data import write_array
 from PertQuant.simCRN.gen_eq_data import gen_detailed_eq_data_file
 from PertQuant.simCRN.equilibrium_v3 import ID_network_species_reactions
+from PertQuant.simCRN.equilibrium_v3 import gen_x_array
 from PertQuant.simCRN.equilibrium_v3 import gen_XY_bounds
 from PertQuant.simCRN.equilibrium_v3 import gen_AB_bounds
 from PertQuant.simCRN.equilibrium_v3 import add_C_bounds
@@ -21,8 +22,8 @@ from PertQuant.simCRN.equilibrium_v3 import Keq
 from PertQuant.simCRN.equilibrium_v3 import calc_A_measured
 
 def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
-    K_array_list, ABC_connected, ABC_nonzero, duplex_nonzero, fixed_bounds,
-    method):
+    K_array_list, ABC_connected, ABC_nonzero, duplex_nonzero, ABC_guess,\
+    fixed_bounds, method, guess):
     '''This function generates random Ci concentrations between [Cmin, Cmax] and
     uses the given args with the function Keq and scipy.optimize.minimize to
     find the equilibrium concentrations of the reactant species. A_measured for 
@@ -33,7 +34,7 @@ def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
     Parameters:
     Cmin (int): Minimum value of Ci
     Cmax (int): Maximum value of Ci
-    x_array (arr): a 1D array of initial guesses for the equilibrium 
+    base_x_array (arr): a 1D array of initial guesses for the equilibrium 
         concentrations of species that react in the CRN. 
         [*A, *B, *C, *AB, *BC, *AC, *AA, *BB, *CC]
     Ai_array (arr): a 1xL array of initial A concentrations
@@ -46,15 +47,16 @@ def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
         KCC_array] where
         KXY_array (arr): a IxJ array of KXY association constants
     ABC_connected (list): [A_connected, B_connected, C_connected] where
-        X_connected (arr): a 1D array of the indices of the connected A species
+        X_connected (arr): a 1xI boolean array of whether Xi is connected to the 
+            chemical reaction network
     ABC_nonzero (list): [A_nonzero, B_nonzero, C_nonzero] where
-        A_nonzero (arr): a 1D array of the indices of the connected A species
-        B_nonzero (arr): a 1D array of the indices of the connected B species
-        C_nonzero (arr): a 1D array of the indices of the connected C species
+        X_nonzero (arr): a 1D array of the indices of the connected X species
     duplex_nonzero (list): [KAB_nonzero, KBC_nonzero, KAC_nonzero, KAA_nonzero, 
         KBB_nonzero, KCC_nonzero] where
         KXY_nonzero (tuple): a tuple of arrays of the indices of the nonzero 
             KXY_array values. 
+    ABC_guess (list): [A_guess, B_guess, C_guess] where
+        X_guess = Initial guesses for the final concentrations of X species.
     fixed_bounds (list): [A_B_bounds, AB_bounds, AA_bounds, BB_bounds] where
         A_B_bounds (list): a list of (min,max) concentration bound tuples for 
             {A} and {B} to use with Keq_fast in scipy.optimize.minimize.
@@ -76,6 +78,12 @@ def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
     # Generate the bounds
     bounds_list = add_C_bounds(Ai_array, Bi_array, Ci_array, fixed_bounds, \
         ABC_nonzero, duplex_nonzero)
+
+    # Generate the initial guess:
+    if guess:
+        x_array = fill_x_array(N, M, L, x_array, ABC_guess, duplex_nonzero)
+    else:
+        pass
 
     # Calculate x_array that solves Keq
     result = minimize(Keq, x_array, (Ai_array, Bi_array, Ci_array, set_sizes, \
@@ -104,6 +112,8 @@ def gen_eq_data_parallel_main():
         data to.')
     parser.add_argument('--method', type=str, help='The solver method to use with \
         scipy.optimize.minimize. Defaults to SLSQP.')
+    parser.add_argument('--guess', type=bool, help='Whether to guess equally \
+        distributed concentrations or zero concentrations. Defaults to False (zero).')
     args = parser.parse_args()
 
     # Check the platform
@@ -135,6 +145,7 @@ def gen_eq_data_parallel_main():
         method=args.method
     else:
         method='SLSQP'
+
     
     # Read in settings
     settings_dict = read_eq_data_settings(settings_file, quiet=quiet)
@@ -178,8 +189,13 @@ def gen_eq_data_parallel_main():
     fixed_bounds = gen_AB_bounds(Ai_array, Bi_array, ABC_nonzero, \
         duplex_nonzero)
 
-    # Generate x_array initial guess
-    x_array = np.zeros(N_reactants)
+    # Generate the fixed portion of the x_array initial guess
+    if guess:
+        x_array, ABC_guess = gen_base_x_array(N, M, L, N_reactants, K_array_list, \
+            duplex_nonzero)
+    else:
+        x_array = np.zeros(N_reactants)
+        ABC_guess = [np.zeros(N), np.zeros(M). np.zeros(L)]
 
     # Compute Am
     if quiet==0:
@@ -191,7 +207,7 @@ def gen_eq_data_parallel_main():
     with concurrent.futures.ProcessPoolExecutor() as executor:
         results = {executor.submit(gen_A_measured, Cmin, Cmax, x_array, Ai_array, \
             Bi_array, set_sizes, K_array_list, ABC_connected, ABC_nonzero, \
-            duplex_nonzero, fixed_bounds, method): i for i in N_range}
+            duplex_nonzero, ABC_guess, fixed_bounds, method, guess): i for i in N_range}
         for result in concurrent.futures.as_completed(results):
             Ci_all_array[index,:], Am_array[index,:] = result.result()
             index+=1
