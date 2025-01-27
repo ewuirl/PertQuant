@@ -73,8 +73,8 @@ def plot_raw_data(settings_dict, title, y_title, save_file='', save=True, xmax=1
         for j in range(N):
             ax[i,j].scatter(settings_dict['A_out_array'][:,j], settings_dict['Ci_array'][:,i], marker='.', \
                            color='skyblue', alpha=0.5)
-            ax[i,j].set_ylabel(f"$T_{i+1}$"+ " initial conc.")
-            ax[i,j].set_xlabel(f"$D_{j+1}$"+ " measured conc.")
+            ax[i,j].set_ylabel(f"$T_{{{i+1}}}$"+ " initial conc.")
+            ax[i,j].set_xlabel(f"$D_{{{j+1}}}$"+ " measured conc.")
             ax[i,j].set_xlim(left=0,right=xmax)
             ax[i,j].set_ylim(bottom=0,top=2.1)
     fig.suptitle(title, y=y_title)
@@ -296,8 +296,8 @@ def plot_true_vs_pred(T_true, T_pred, Cmin, Cmax, title, save_file='', max_cols=
         for i in range(L):
             ax[i].scatter(T_true[:,i],T_pred[:,i], alpha=alpha, marker='.', color=color)
             ax[i].plot([Cmin, Cmax], [Cmin, Cmax], color='k', linestyle=(0,(10,5)))
-            ax[i].set_xlabel(f'True $T_{i+1}$')
-            ax[i].set_ylabel(f'Predicted $T_{i+1}$')
+            ax[i].set_xlabel(f'True $T_{{{i+1}}}$')
+            ax[i].set_ylabel(f'Predicted $T_{{{i+1}}}$')
             ylim_array[i,:]=ax[i].get_ylim()
         for i in range(L):
             ax[i].set_ylim(bottom=min(ylim_array[:,0]),top=max(ylim_array[:,1]))
@@ -307,8 +307,8 @@ def plot_true_vs_pred(T_true, T_pred, Cmin, Cmax, title, save_file='', max_cols=
             col = i % max_cols
             ax[row,col].scatter(T_true[:,i],T_pred[:,i], alpha=alpha, marker='.', color=color)
             ax[row,col].plot([Cmin, Cmax], [Cmin, Cmax], color='k', linestyle=(0,(10,5)))
-            ax[row,col].set_xlabel(f'True $T_{i+1}$')
-            ax[row,col].set_ylabel(f'Predicted $T_{i+1}$')
+            ax[row,col].set_xlabel(f'True $T_{{{i+1}}}$')
+            ax[row,col].set_ylabel(f'Predicted $T_{{{i+1}}}$')
             ylim_array[i,:]=ax[row,col].get_ylim()
         for i in range(L):
             row = math.floor(i/max_cols)
@@ -342,8 +342,8 @@ def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
             ax[i].scatter(T_true[:,i],T_true[:,i]-T_pred[:,i], alpha=0.5, \
                 marker='.', color=color)
             ax[i].plot([Cmin, Cmax], [0, 0], color='k', linestyle=(0,(10,5)))
-            ax[i].set_xlabel(f'True $T_{i+1}$')
-            ax[i].set_ylabel(f'Residuals (True-Predicted $T_{i}$)')
+            ax[i].set_xlabel(f'True $T_{{{i+1}}}$')
+            ax[i].set_ylabel(f'Residuals (True-Predicted $T_{{{i}}}$)')
             ylim_array[i,:]=ax[i].get_ylim()
         for i in range(L):
             ax[i].set_ylim(bottom=min(ylim_array[:,0]),top=max(ylim_array[:,1]))
@@ -354,8 +354,8 @@ def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
             ax[row,col].scatter(T_true[:,i],T_true[:,i]-T_pred[:,i], alpha=0.5, \
                 marker='.', color=color)
             ax[row,col].plot([Cmin, Cmax], [0, 0], color='k', linestyle=(0,(10,5)))
-            ax[row,col].set_xlabel(f'True $T_{i+1}$')
-            ax[row,col].set_ylabel(f'Residuals (True-Predicted $T_{i}$)')
+            ax[row,col].set_xlabel(f'True $T_{{{i+1}}}$')
+            ax[row,col].set_ylabel(f'Residuals (True-Predicted $T_{{{i}}}$)')
             ylim_array[i,:]=ax[row,col].get_ylim()
         for i in range(L):
             row = math.floor(i/max_cols)

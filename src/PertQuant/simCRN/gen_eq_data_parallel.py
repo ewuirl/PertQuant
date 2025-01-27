@@ -21,7 +21,8 @@ from PertQuant.simCRN.equilibrium_v3 import Keq
 from PertQuant.simCRN.equilibrium_v3 import calc_A_measured
 
 def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
-    K_array_list, ABC_connected, ABC_nonzero, duplex_nonzero, fixed_bounds):
+    K_array_list, ABC_connected, ABC_nonzero, duplex_nonzero, fixed_bounds,
+    method):
     '''This function generates random Ci concentrations between [Cmin, Cmax] and
     uses the given args with the function Keq and scipy.optimize.minimize to
     find the equilibrium concentrations of the reactant species. A_measured for 
@@ -59,6 +60,7 @@ def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
             {A} and {B} to use with Keq_fast in scipy.optimize.minimize.
         XY_bounds (list): a list of (min,max) concentration bound tuples for 
             {XY} to use with Keq_fast in scipy.optimize.minimize. 
+    method (str): The solver method to use with scipy.optimize.minimize.
 
     Returns:
     Ci_array: a 1xL array of initial C concentrations
@@ -78,7 +80,7 @@ def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
     # Calculate x_array that solves Keq
     result = minimize(Keq, x_array, (Ai_array, Bi_array, Ci_array, set_sizes, \
             K_array_list, ABC_connected, ABC_nonzero, duplex_nonzero), \
-        method='SLSQP', bounds=bounds_list)
+        method=method, bounds=bounds_list)
     x_final = result.x
 
     # Calculate the measured A concentration
@@ -100,6 +102,8 @@ def gen_eq_data_parallel_main():
         and timing. 1 for no commandline output. Defaults to 0.')
     parser.add_argument('--time_file', type=str, help='File to append simulation time \
         data to.')
+    parser.add_argument('--method', type=str, help='The solver method to use with \
+        scipy.optimize.minimize. Defaults to SLSQP.')
     args = parser.parse_args()
 
     # Check the platform
@@ -126,6 +130,11 @@ def gen_eq_data_parallel_main():
 
     if quiet==0:
         print(f'Reading in settings file {settings_file_name}')
+
+    if args.method:
+        method=args.method
+    else:
+        method='SLSQP'
     
     # Read in settings
     settings_dict = read_eq_data_settings(settings_file, quiet=quiet)
@@ -182,7 +191,7 @@ def gen_eq_data_parallel_main():
     with concurrent.futures.ProcessPoolExecutor() as executor:
         results = {executor.submit(gen_A_measured, Cmin, Cmax, x_array, Ai_array, \
             Bi_array, set_sizes, K_array_list, ABC_connected, ABC_nonzero, \
-            duplex_nonzero, fixed_bounds): i for i in N_range}
+            duplex_nonzero, fixed_bounds, method): i for i in N_range}
         for result in concurrent.futures.as_completed(results):
             Ci_all_array[index,:], Am_array[index,:] = result.result()
             index+=1
