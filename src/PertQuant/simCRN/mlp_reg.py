@@ -115,6 +115,8 @@ def mlp_reg_main():
     train_set_size = int(0.8*full_set_size)
     if N==2:
         dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50, 25, 10]
+    elif N==20:
+        dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50]
     else:
         dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50, 25]
     data_set_df = pd.DataFrame(data=np.zeros((np.shape(A_out_array)[0], \
@@ -147,6 +149,8 @@ def mlp_reg_main():
         parameters_MLP['model__hidden_layer_sizes'] = [(5,),(10,),(15,),(20,)]
     elif N == 10:
         parameters_MLP['model__hidden_layer_sizes'] = [(10,),(15,),(20,),(25,)]
+    elif N == 20:
+        parameters_MLP['model__hidden_layer_sizes'] = [(15,),(20,),(25,),(30,)]
     else:
         pass
     scoring_MLP = ['r2', 'neg_mean_absolute_error']
@@ -156,7 +160,7 @@ def mlp_reg_main():
     print(f'Hidden layer sizes: {parameters_MLP['model__hidden_layer_sizes']}')
     for value_list in parameters_MLP.values():
         combo_number_MLP *= len(value_list)
-        print(f'Number of hyperparameter combinations: {combo_number_MLP}')
+    print(f'Number of hyperparameter combinations: {combo_number_MLP}')
 
     # Create dataframe to store results
     grid_search_list = []

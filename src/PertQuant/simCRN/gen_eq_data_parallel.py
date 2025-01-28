@@ -228,8 +228,10 @@ def gen_eq_data_parallel_main():
         print('Saving results.')
     if guess:
         data_file_name = f'{save_folder}{sep}{save_file_name}_data_guess.txt'
+        time_file_name = f'{save_file_name}_data_guess.txt'
     else:
         data_file_name = f'{save_folder}{sep}{save_file_name}_data.txt'
+        time_file_name = f'{save_file_name}_data.txt'
         
     gen_detailed_eq_data_file(data_file_name, Ci_all_array, \
         Am_array, Cmin, Cmax, Bi_array, Ai_array, KAB_array, KBC_array, \
@@ -240,7 +242,7 @@ def gen_eq_data_parallel_main():
     if args.time_file: 
         time_file = args.time_file.strip('"')
         with open(time_file,'a') as file:
-            file.write(f'\n{data_file_name}\t{end-start}')
+            file.write(f'\n{time_file_name}\t{end-start}')
     else:
         pass
         
