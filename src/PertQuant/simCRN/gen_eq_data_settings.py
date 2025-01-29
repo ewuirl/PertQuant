@@ -298,7 +298,8 @@ if __name__ == '__main__':
     # K_array_dict['KAC_array'] = np.ones((N,L))*1000
     # scale_arr = np.array([1,2.5,5])
     # order_arr = np.logspace(start=-2,stop=3, num=6)
-    # KBC_vals = np.array([0, 0.75])
+    # # KBC_vals = np.array([0, 0.75])
+    # KBC_vals = np.array([0.75])
     # for order in order_arr:
     #     KBC_vals = np.concatenate((KBC_vals, order*scale_arr))
     # KBC_vals = np.concatenate((KBC_vals,np.array([10000])))

@@ -25,7 +25,8 @@ from sklearn.metrics import mean_absolute_error
 
 def gen_regularization_plots_main():
     # Argument parser
-    parser = argparse.ArgumentParser(description='Generates eq_data ')    
+    parser = argparse.ArgumentParser(description='Generates plots for regression \
+        results.')    
     parser.add_argument('data_file_name', type=str, help='The name of the data_file \
         to use')
     parser.add_argument('case_title', type=str, help='The name to describe the case \
@@ -36,8 +37,6 @@ def gen_regularization_plots_main():
     parser.add_argument('--show_plot', type=bool, help='Whether to not show the plots. \
         Defaults to False.')
     parser.add_argument('--no_save', type=bool, help='Whether to not save the plots. \
-        Defaults to False (save).')
-    parser.add_argument('--suffix', type=bool, help='Whether to not save the plots. \
         Defaults to False (save).')
     args = parser.parse_args()
 

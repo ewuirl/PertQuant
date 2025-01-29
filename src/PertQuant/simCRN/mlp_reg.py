@@ -176,10 +176,12 @@ def mlp_reg_main():
     results_df['dataset_size'] = dataset_size_list
     # alt_model_df = pd.DataFrame(columns=results_columns)
 
-    # Create dataframe to store Ti-specific MAE
-    MAE_columns = ['dataset_size'] + [f'Train T{i+1}' for i in range(L)] + [f'Test T{i+1}' for i in range(L)]
-    MAE_df = pd.DataFrame(columns=MAE_columns)
+    # Create dataframe to store Ti-specific metrics
+    Ti_columns = ['dataset_size'] + [f'Train T{i+1}' for i in range(L)] + [f'Test T{i+1}' for i in range(L)]
+    MAE_df = pd.DataFrame(columns=Ti_columns)
     MAE_df['dataset_size'] = dataset_size_list
+    r2_df = pd.DataFrame(columns=Ti_columns)
+    r2_df['dataset_size'] = dataset_size_list
 
     # Grid search 5 fold cross validation
     print('Performing grid search with 5 fold cross validation')
@@ -216,10 +218,17 @@ def mlp_reg_main():
         MAE_df.loc[i,'Test T1':f'Test T{L}'] = mean_absolute_error(T_final_test, \
             pred_test, multioutput='raw_values')
 
+        # Store Ti-specific r2
+        r2_df.loc[i,'Train T1':f'Train T{L}'] = r2_score(T_train_list[i], \
+            pred_train, multioutput='raw_values')
+        r2_df.loc[i,'Test T1':f'Test T{L}'] = r2_score(T_final_test, \
+            pred_test, multioutput='raw_values')
+
     # Save the results dataframe
     print('Saving results to csv')
     results_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_results_summary_{model_type}{suffix}.csv')
     MAE_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_MAE_Ti_{model_type}{suffix}.csv')
+    r2_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_r2_Ti_{model_type}{suffix}.csv')
 
     # # Look at the MAE rank 1 model
     # if results_df.loc[i,'rank_test_mean_absolute_error'] != 1:
