@@ -29,6 +29,8 @@ def gen_Ti_specific_metrics_main():
         to False.')
     parser.add_argument('--r2', type=str, help='Whether to generate r2 metrics. Defaults \
         to False.')
+    parser.add_argument('--partition', type=str, help='The name of the data \
+        partition csv.')
     
     args = parser.parse_args()
 
@@ -50,6 +52,11 @@ def gen_Ti_specific_metrics_main():
     else:
         r2=False
 
+    if args.partition:
+        data_partition_name = args.partition
+    else:
+        data_partition_name = f'{N}-{M}-{L}_{case}_dataset_partitions{suffix}.csv'
+
     if MAE or r2:
         # Read in data
         settings_dict = read_detailed_eq_data_file(f'{case_name}_data{suffix}.txt')
@@ -64,7 +71,7 @@ def gen_Ti_specific_metrics_main():
         # Get partitioned data
         A_out_array = settings_dict['A_out_array']
         Ci_array = settings_dict['Ci_array']
-        dataset_csv = pd.read_csv(f'{N}-{M}-{L}_{case}_dataset_partitions{suffix}.csv', index_col=0)
+        dataset_csv = pd.read_csv(f'{data_partition_name}', index_col=0)
         data_dict = get_partitioned_data(A_out_array, Ci_array, dataset_csv)
 
         # Get regression results

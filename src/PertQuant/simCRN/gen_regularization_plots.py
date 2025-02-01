@@ -155,15 +155,15 @@ def gen_regularization_plots_main():
     if show_plot:
         plt.show(block=True)
 
-    # Get Ti-specific MAE
-    print('Getting Ti-specific MAE')
-    MAE_columns = ['dataset_size'] + [f'Train T{i+1}' for i in range(L)] + [f'Test T{i+1}' for i in range(L)]
-    MAE_df = pd.DataFrame(columns=MAE_columns)
-    MAE_df['dataset_size'] = dataset_size_list
-    for i, dataset_size in enumerate(dataset_size_list):
-        MAE_df.loc[i,'Train T1':f'Train T{L}'] = mean_absolute_error(data_dict[dataset_size][1], pred_train_list[i], \
-                                                      multioutput='raw_values')
-        MAE_df.loc[i,'Test T1':f'Test T{L}'] = mean_absolute_error(data_dict['test_set'][1], pred_test_list[i], \
-                                                      multioutput='raw_values')
-    MAE_df.to_csv(f'{N}-{M}-{L}_{case}_MAE_Ti_{model_type}{suffix}.csv')
-    MAE_df
+    # # Get Ti-specific MAE
+    # print('Getting Ti-specific MAE')
+    # MAE_columns = ['dataset_size'] + [f'Train T{i+1}' for i in range(L)] + [f'Test T{i+1}' for i in range(L)]
+    # MAE_df = pd.DataFrame(columns=MAE_columns)
+    # MAE_df['dataset_size'] = dataset_size_list
+    # for i, dataset_size in enumerate(dataset_size_list):
+    #     MAE_df.loc[i,'Train T1':f'Train T{L}'] = mean_absolute_error(data_dict[dataset_size][1], pred_train_list[i], \
+    #                                                   multioutput='raw_values')
+    #     MAE_df.loc[i,'Test T1':f'Test T{L}'] = mean_absolute_error(data_dict['test_set'][1], pred_test_list[i], \
+    #                                                   multioutput='raw_values')
+    # MAE_df.to_csv(f'{N}-{M}-{L}_{case}_MAE_Ti_{model_type}{suffix}.csv')
+    # MAE_df

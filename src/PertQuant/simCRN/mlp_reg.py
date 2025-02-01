@@ -45,6 +45,8 @@ def mlp_reg_main():
         folder to save data to. Defaults to the folder of the input file.')
     parser.add_argument('--raw_data', type=bool, help='If True, plots and shows \
     the raw data and exits. Defaults to False.')
+    parser.add_argument('--time_file', type=str, help='File to append run time \
+        data to.')
     # parser.add_argument('--quiet', type=int, help='Verbosity level. 0 for settings \
         # and timing. 1 for no commandline output. Defaults to 0.')
     args = parser.parse_args()
@@ -96,9 +98,7 @@ def mlp_reg_main():
         # plotting settings
         mpl.rcParams['font.size']=18
         title=f"D=B=T={N} {case} Raw Data"
-        if N == 5:
-            y_raw_title = 0.92
-        elif N == 10:
+        if N == 10 or N == 20:
             y_raw_title = 0.89 
         else:
             y_raw_title = 0.9
@@ -150,7 +150,7 @@ def mlp_reg_main():
     elif N == 10:
         parameters_MLP['model__hidden_layer_sizes'] = [(10,),(15,),(20,),(25,)]
     elif N == 20:
-        parameters_MLP['model__hidden_layer_sizes'] = [(15,),(20,),(25,),(30,)]
+        parameters_MLP['model__hidden_layer_sizes'] = [(20,),(25,),(30,),(35,)]
     else:
         pass
     scoring_MLP = ['r2', 'neg_mean_absolute_error']
@@ -184,6 +184,7 @@ def mlp_reg_main():
     r2_df['dataset_size'] = dataset_size_list
 
     # Grid search 5 fold cross validation
+    start = time.perf_counter()
     print('Performing grid search with 5 fold cross validation')
     for i, dataset_size in enumerate(dataset_size_list):
         print(f'Dataset size: {dataset_size}')
@@ -223,12 +224,20 @@ def mlp_reg_main():
             pred_train, multioutput='raw_values')
         r2_df.loc[i,'Test T1':f'Test T{L}'] = r2_score(T_final_test, \
             pred_test, multioutput='raw_values')
-
+    end = time.perf_counter()
+    
     # Save the results dataframe
     print('Saving results to csv')
     results_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_results_summary_{model_type}{suffix}.csv')
     MAE_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_MAE_Ti_{model_type}{suffix}.csv')
     r2_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_r2_Ti_{model_type}{suffix}.csv')
+
+    if args.time_file: 
+        time_file = args.time_file.strip('"')
+        with open(time_file,'a') as file:
+            file.write(f'\n{time_file_name}\t{end-start}')
+    else:
+        pass
 
     # # Look at the MAE rank 1 model
     # if results_df.loc[i,'rank_test_mean_absolute_error'] != 1:
