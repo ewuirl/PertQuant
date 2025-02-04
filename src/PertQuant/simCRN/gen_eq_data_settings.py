@@ -165,21 +165,22 @@ if __name__ == '__main__':
     # case_title_list.append('Case 1')
     # folder_list.append(f'{N}-{M}-{L}_case-1')
     # # KBC = 1, 1 distinct
-    # KBC = 1
+    # # KBC = 1
+    # KBC = 10
     # distinct = 1
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 1a, KBC = 1, 1 distinct')
-    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-1_1d')
+    # case_title_list.append(f'Case 1a, KBC = {KBC}, 1 distinct')
+    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-{KBC}_1d')
     # # KBC = 1, all distinct
     # distinct = L-1
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 1a, KBC = 1, all distinct')
-    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-1_all')
-    # # KBC = 1, 5 distinct
+    # case_title_list.append(f'Case 1a, KBC = {KBC}, all distinct')
+    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-{KBC}_all')
+    # # KBC = 1, L distinct
     # distinct = L
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
     # case_title_list.append('Case 1a, KBC = 1, all KBC')
-    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-1_{L}d')
+    # folder_list.append(f'{N}-{M}-{L}_case-1a_KBC-{KBC}_{L}d')
     # # KBC = 100, 1 distinct
     # KBC = 100
     # distinct = 1
@@ -207,21 +208,22 @@ if __name__ == '__main__':
     # folder_list.append(f'{N}-{M}-{L}_case-2')
     # # KBC = 1, 1 distinct
     # KBC = 1
+    # KBC = 10
     # distinct = 1
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 2a, KBC = 1, 1 distinct')
-    # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-1_1d')
+    # case_title_list.append(f'Case 2a, KBC = {KBC}, 1 distinct')
+    # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-{KBC}_1d')
     # # KBC = 1, all distinct
     # distinct = L-1
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 2a, KBC = 1, all distinct')
-    # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-1_all')
+    # case_title_list.append(f'Case 2a, KBC = {KBC}, all distinct')
+    # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-{KBC}_all')
     # # KBC = 1, all L distinct
     # distinct = L
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
-    # case_title_list.append('Case 2a, KBC = 1, all KBC')
-    # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-1_{L}d')
-    # # KBC = 100, 1 distinct
+    # case_title_list.append(f'Case 2a, KBC = {KBC}, all KBC')
+    # folder_list.append(f'{N}-{M}-{L}_case-2a_KBC-{KBC}_{L}d')
+    # KBC = 100, 1 distinct
     # KBC = 100
     # distinct = 1
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
@@ -245,28 +247,27 @@ if __name__ == '__main__':
     # KBC_list.append(np.zeros((M,L)))
     # case_title_list.append('Case 3')
     # folder_list.append(f'{N}-{M}-{L}_case-3')
-    # # KBC = 1
     # KBC = 1
+    # KBC = 10
     # distinct = 1
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
     # case_title_list.append('Case 3a, KBC = 1')
-    # folder_list.append(f'{N}-{M}-{L}_case-3a_KBC-1')
+    # folder_list.append(f'{N}-{M}-{L}_case-3a_KBC-{KBC}')
     # # KBC = 1, 1 distinct
-    # KBC = 1
     # distinct = 1
     # KBC_list.append(gen_KBC_array_case_b(M, distinct, L, KBC))
     # case_title_list.append('Case 3b, KBC = 1, 1 distinct')
-    # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-1_1d')
+    # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-{KBC}_1d')
     # # KBC = 1, all distinct
     # distinct = L-1
     # KBC_list.append(gen_KBC_array_case_b(M, distinct, L, KBC))
     # case_title_list.append('Case 3b, KBC = 1, all distinct')
-    # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-1_all')
+    # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-{KBC}_all')
     # # KBC = 1, all KBC
     # distinct = L
     # KBC_list.append(gen_KBC_array_case_a(M, distinct, L, KBC))
     # case_title_list.append('Case 3b, KBC = 1, all KBC')
-    # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-1_{L}d')
+    # folder_list.append(f'{N}-{M}-{L}_case-3b_KBC-{KBC}_{L}d')
     # # KBC = 100
     # KBC = 100
     # distinct = 1

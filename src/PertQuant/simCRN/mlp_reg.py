@@ -225,7 +225,7 @@ def mlp_reg_main():
         r2_df.loc[i,'Test T1':f'Test T{L}'] = r2_score(T_final_test, \
             pred_test, multioutput='raw_values')
     end = time.perf_counter()
-    
+
     # Save the results dataframe
     print('Saving results to csv')
     results_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_results_summary_{model_type}{suffix}.csv')
@@ -235,7 +235,7 @@ def mlp_reg_main():
     if args.time_file: 
         time_file = args.time_file.strip('"')
         with open(time_file,'a') as file:
-            file.write(f'\n{time_file_name}\t{end-start}')
+            file.write(f'\n{data_file_name}\t{end-start}')
     else:
         pass
 
