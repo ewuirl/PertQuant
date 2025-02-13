@@ -19,14 +19,17 @@ def gen_bead_strands(detector_strand_file, save_file_name, n_strands, \
                     save_file.write('\n')
 
 if __name__ == "__main__":
-    # Initialize the random number generator
-    rand.seed()
+    # # Initialize the random number generator
+    # rand.seed()
 
-    detector_strand_file = '20_detector_strands.txt'
-    n_strands = 20
-    comp = 0.25
-    comp_str = f'{comp}'.replace('.','-')
-    save_file_name = f'{n_strands}_bead_strands_comp-{comp_str}.txt'
+    # detector_strand_file = '20_detector_strands.txt'
+    # n_strands = 20
+    # comp = 0.25
+    # comp_str = f'{comp}'.replace('.','-')
+    # save_file_name = f'{n_strands}_bead_strands_comp-{comp_str}.txt'
 
-    gen_bead_strands(detector_strand_file, save_file_name, n_strands, \
-    comp)
+    # gen_bead_strands(detector_strand_file, save_file_name, n_strands, \
+    # comp)
+
+    bead_strand = 'AGCTTGCTGTATGGGTCATGTTCCT'
+    print(gen_complement(bead_strand))

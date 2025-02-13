@@ -278,7 +278,7 @@ def compare_alt_model(results_df, alt_model_df):
                 alt_model_df.loc[index,f'better_{set_type}_mean_absolute_error'] = False
 
 def plot_true_vs_pred(T_true, T_pred, Cmin, Cmax, title, save_file='', max_cols=4, \
-    save=True, col_scaler=5, row_scaler=5, color='royalblue', alpha=0.5):
+    save=True, col_scaler=5, row_scaler=5, color='#0072B2', alpha=0.5):
     L = np.shape(T_true)[1]
     # Figure size of plot
     if L <= max_cols:
@@ -324,7 +324,7 @@ def plot_true_vs_pred(T_true, T_pred, Cmin, Cmax, title, save_file='', max_cols=
     return (fig, ax)
 
 def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
-    max_cols=4, save=True, col_scaler=6.5, row_scaler=5, color='royalblue'):
+    max_cols=4, save=True, col_scaler=6.5, row_scaler=5, color='#0072B2'):
     L = np.shape(T_true)[1]
     # Figure size of plot
     if L <= max_cols:
@@ -371,8 +371,8 @@ def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
     return (fig, ax)
 
 def plot_metric_summary(results_df, case, model_type, metric, save_file, width=8, \
-    height=6, save=True, xscale='log', train_color='royalblue', \
-    test_color='orange', cv_color='gray', alpha=0.75, std_err=True):
+    height=6, save=True, xscale='log', train_color='#0072B2', \
+    test_color='orange', cv_color='gray', alpha=1, std_err=True):
     metric = metric.lstrip('neg_')
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE'}
 
@@ -413,7 +413,7 @@ def plot_metric_summary(results_df, case, model_type, metric, save_file, width=8
 
 def plot_metric_best_vs_alt(results_df, alt_model_df, case, model_type, metric, \
     save_file, width=8,height=6, save=True, xscale='log', \
-    train_color='royalblue', test_color='orange', alpha=0.75):
+    train_color='#0072B2', test_color='orange', alpha=1):
     metric = metric.lstrip('neg_')
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE'}
 

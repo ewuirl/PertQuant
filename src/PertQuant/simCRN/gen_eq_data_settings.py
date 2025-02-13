@@ -160,7 +160,7 @@ if __name__ == '__main__':
     # # Case 1
     # KAC_vals = np.linspace(1000, 2000, L)
     # K_array_dict['KAC_array'] = gen_KAC_array_case_1_all(N, L, KAC_vals)
-    # # base case
+    # base case
     # KBC_list.append(np.zeros((M,L)))
     # case_title_list.append('Case 1')
     # folder_list.append(f'{N}-{M}-{L}_case-1')
@@ -359,7 +359,7 @@ if __name__ == '__main__':
     # write_settings_file(file_name, case_title, N, M, L, N_runs, Cmin, 
     #     Cmax, Ai_array, Bi_array, K_array_dict)
 
-    # # For case variations
+    # For case variations
     # for i in range(len(KBC_list)):
     #     folder = folder_list[i]
     #     if folder not in os.listdir(save_folder):
