@@ -4,6 +4,7 @@ import math
 import time
 import pandas as pd
 import pickle
+from sklearn.preprocessing import StandardScaler
 
 def read_detailed_eq_data_file(file_name):
     with open(file_name, 'r') as file:
@@ -72,7 +73,7 @@ def plot_raw_data(settings_dict, title, y_title, save_file='', save=True, xmax=1
     for i in range(L):
         for j in range(N):
             ax[i,j].scatter(settings_dict['A_out_array'][:,j], settings_dict['Ci_array'][:,i], marker='.', \
-                           color='skyblue', alpha=0.5)
+                           color='#56B4E9', alpha=0.5)
             ax[i,j].set_ylabel(f"$T_{{{i+1}}}$"+ " initial conc.")
             ax[i,j].set_xlabel(f"$D_{{{j+1}}}$"+ " measured conc.")
             ax[i,j].set_xlim(left=0,right=xmax)
@@ -130,6 +131,35 @@ def get_partitioned_data(D_data, T_data, dataset_csv):
         T_subset = T_data[dataset_csv[column]==1]
         data_dict[column_key]=(D_subset, T_subset)
     return data_dict
+
+def plot_normalized_data(data_all, data_train, title, y_title, save_file='', save=True):
+    scaler = StandardScaler()
+    scaler.fit(data_train[0])
+    scaled_data = scaler.transform(data_all[0])
+    N = data_all[0].shape[1]
+    L = data_all[1].shape[1]
+    
+    # Figure out the dimensions of the plot
+    width = N*6.5
+    height = L*5
+    fig, ax = plt.subplots(L,N,figsize=(width, height))
+    
+    for i in range(L):
+        for j in range(N):
+            ax[i,j].scatter(scaled_data[:,j], data_all[1][:,i], marker='.', \
+                           color='#56B4E9', alpha=0.5)
+            ax[i,j].set_ylabel(f"$T_{{{i+1}}}$"+ " initial conc.")
+            ax[i,j].set_xlabel(f"$D_{{{j+1}}}$"+ " measured conc.")
+#             ax[i,j].set_xlim(left=0,right=xmax)
+            ax[i,j].set_ylim(bottom=0,top=2.1)
+    fig.suptitle(title, y=y_title)
+    if save and len(save_file)>0:
+        fig.savefig(f"{save_file}.png", bbox_inches="tight")
+    elif save and len(save_file)==0:
+        fig.savefig(f"{title}.png", bbox_inches="tight")
+    else:
+        pass
+    return (fig, ax)
 
 def save_grid_search_results(results_df, index, grid_search, dataset_size, refit, 
     N, M, L, case, model_type, scoring_list, save_folder='', suffix=''):

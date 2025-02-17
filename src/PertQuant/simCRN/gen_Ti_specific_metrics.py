@@ -52,11 +52,6 @@ def gen_Ti_specific_metrics_main():
     else:
         r2=False
 
-    if args.partition:
-        data_partition_name = args.partition
-    else:
-        data_partition_name = f'{N}-{M}-{L}_{case}_dataset_partitions{suffix}.csv'
-
     if MAE or r2:
         # Read in data
         settings_dict = read_detailed_eq_data_file(f'{case_name}_data{suffix}.txt')
@@ -65,8 +60,14 @@ def gen_Ti_specific_metrics_main():
         L = settings_dict['L']
         Cmin = settings_dict['Cmin']
         Cmax = settings_dict['Cmax']
+
         case = case_name.removeprefix(f'{N}-{M}-{L}_')
         folder = f'{case}_{model_type}{suffix}'
+        if args.partition:
+            data_partition_name = args.partition
+        else:
+            data_partition_name = f'{N}-{M}-{L}_{case}_dataset_partitions{suffix}.csv'
+        
 
         # Get partitioned data
         A_out_array = settings_dict['A_out_array']
@@ -93,10 +94,11 @@ def gen_Ti_specific_metrics_main():
         for i, dataset_size in enumerate(dataset_size_list):
             pred_train_list.append(model_list[i].predict(data_dict[dataset_size][0]))
             pred_test_list.append(model_list[i].predict(data_dict['test_set'][0]))
+
+        Ti_columns = ['dataset_size'] + [f'Train T{i+1}' for i in range(L)] + [f'Test T{i+1}' for i in range(L)]
     else:
         print('No metric provided')
-
-    Ti_columns = ['dataset_size'] + [f'Train T{i+1}' for i in range(L)] + [f'Test T{i+1}' for i in range(L)]
+    
     if MAE:
         # Get Ti-specific MAE
         print('Getting Ti-specific MAE')
