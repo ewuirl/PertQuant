@@ -61,7 +61,7 @@ def read_detailed_eq_data_file(file_name):
             
     return settings_dict
 
-def plot_raw_data(settings_dict, title, y_title, save_file='', save=True, xmax=1.05):
+def plot_raw_data(settings_dict, title, y_title, save_file='', save=True):
     L = settings_dict['L']
     N = settings_dict['N']
     
@@ -76,7 +76,7 @@ def plot_raw_data(settings_dict, title, y_title, save_file='', save=True, xmax=1
                            color='#56B4E9', alpha=0.5)
             ax[i,j].set_ylabel(f"$T_{{{i+1}}}$"+ " initial conc.")
             ax[i,j].set_xlabel(f"$D_{{{j+1}}}$"+ " measured conc.")
-            ax[i,j].set_xlim(left=0,right=xmax)
+            ax[i,j].set_xlim(left=0,right=settings_dict['Ai array'][j]+0.05)
             ax[i,j].set_ylim(bottom=0,top=2.1)
     fig.suptitle(title, y=y_title)
     if save and len(save_file)>0:
