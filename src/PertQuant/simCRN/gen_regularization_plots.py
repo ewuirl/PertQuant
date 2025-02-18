@@ -185,3 +185,6 @@ def gen_regularization_plots_main():
     #                                                   multioutput='raw_values')
     # MAE_df.to_csv(f'{N}-{M}-{L}_{case}_MAE_Ti_{model_type}{suffix}.csv')
     # MAE_df
+
+if __name__ == '__main__':
+    gen_regularization_plots_main()
