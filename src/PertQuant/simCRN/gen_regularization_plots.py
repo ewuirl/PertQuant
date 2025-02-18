@@ -8,6 +8,7 @@ import matplotlib as mpl
 import pandas as pd
 import argparse
 import pickle
+import platform
 from PertQuant.simCRN.multivariate_reg_v2 import read_detailed_eq_data_file
 from PertQuant.simCRN.multivariate_reg_v2 import get_partitioned_data
 from PertQuant.simCRN.multivariate_reg_v2 import plot_raw_data
@@ -41,6 +42,12 @@ def gen_regularization_plots_main():
         and residuals plots.')
     parser.add_argument('--save_off', action='store_true', help='Will not save plots.')
     args = parser.parse_args()
+
+    # Check the platform
+    if platform.system() == 'Windows':
+        sep = '\\'
+    else:
+        sep = '/'
 
     # Parse the arguments
     data_file_name = args.data_file_name
@@ -110,7 +117,7 @@ def gen_regularization_plots_main():
         # Get trained models
         model_list = []
         for i, dataset_size in enumerate(dataset_size_list):
-            model_file_name = f'{folder}/{N}-{M}-{L}_{case}_{model_type}_{dataset_size}{suffix}.pkl'
+            model_file_name = f'{folder}{sep}{N}-{M}-{L}_{case}_{model_type}_{dataset_size}{suffix}.pkl'
             
             with open(model_file_name, 'rb') as model_file:
                 model = pickle.load(model_file)
@@ -127,22 +134,22 @@ def gen_regularization_plots_main():
         for i, dataset_size in enumerate(dataset_size_list):
             dataset_size = dataset_size_list[i]
             train_title = f'{case_title}: True vs Predicted Train $T_i$, Best {model_type} with $N_s$={dataset_size}' 
-            train_save = f'{folder}/{N}-{M}-{L}_{case}_train_true_vs_pred_best_{model_type}_{dataset_size}{suffix}'
+            train_save = f'{folder}{sep}{N}-{M}-{L}_{case}_train_true_vs_pred_best_{model_type}_{dataset_size}{suffix}'
             plot_true_vs_pred(data_dict[dataset_size][1], pred_train_list[i], \
                 Cmin, Cmax, train_title, train_save, max_cols=max_cols, \
                 save=save)
             test_title = f'{case_title}: True vs Predicted Test $T_i$, Best {model_type} with $N_s$={dataset_size}'
-            test_save = f'{folder}/{N}-{M}-{L}_{case}_test_true_vs_pred_best_{model_type}_{dataset_size}{suffix}'
+            test_save = f'{folder}{sep}{N}-{M}-{L}_{case}_test_true_vs_pred_best_{model_type}_{dataset_size}{suffix}'
             plot_true_vs_pred(data_dict['test_set'][1], pred_test_list[i], \
                 Cmin, Cmax, test_title, test_save, max_cols=max_cols, \
                 save=save, color='orange')
             train_title = f'{case_title}: Predicted Train $T_i$ Residuals, Best {model_type} with $N_s$={dataset_size}' 
-            train_save = f'{folder}/{N}-{M}-{L}_{case}_train_residuals_best_{model_type}_{dataset_size}{suffix}'
+            train_save = f'{folder}{sep}{N}-{M}-{L}_{case}_train_residuals_best_{model_type}_{dataset_size}{suffix}'
             plot_residuals(data_dict[dataset_size][1], pred_train_list[i], \
                 Cmin, Cmax, train_title, train_save, max_cols=max_cols, \
                 save=save)
             test_title = f'{case_title}: Predicted Test $T_i$ Residuals, Best {model_type} with $N_s$={dataset_size}' 
-            test_save = f'{folder}/{N}-{M}-{L}_{case}_test_residuals_best_{model_type}_{dataset_size}{suffix}'
+            test_save = f'{folder}{sep}{N}-{M}-{L}_{case}_test_residuals_best_{model_type}_{dataset_size}{suffix}'
             plot_residuals(data_dict['test_set'][1], pred_test_list[i], \
                 Cmin, Cmax, test_title, test_save, max_cols=max_cols, \
                 save=save, color='orange')
