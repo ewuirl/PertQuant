@@ -115,6 +115,10 @@ def calc_X_conservation_constraint(Xi_array, Xf_array, XY_array, XZ_array, XX_ar
 
 def calculate_conservation_constraints(x_array, Ai_array, Bi_array, Ci_array, \
     set_sizes, K_array_list, ABC_connected, ABC_nonzero, duplex_nonzero):
+
+    # Unpack set sizes
+    N, M, L = set_sizes
+    
     # Unpack K_arrays
     KAB_array, KBC_array, KAC_array, KAA_array, KBB_array, KCC_array \
     = K_array_list
