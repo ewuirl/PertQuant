@@ -130,7 +130,7 @@ def gen_eq_data_parallel_main():
         scipy.optimize.minimize. Defaults to SLSQP.')
     parser.add_argument('--guess', type=bool, help='Whether to guess equally \
         distributed concentrations or zero concentrations. Defaults to False (zero).')
-    paers.add_argument('--constraints', type=bool, help='Whether to use nonlinear \
+    parser.add_argument('--constraints', type=bool, help='Whether to use nonlinear \
         constraints. Defaults to False.')
     args = parser.parse_args()
 
@@ -251,7 +251,7 @@ def gen_eq_data_parallel_main():
         guess_name = '_guess'
     else:
         guess_name = ''
-        
+
     if use_constraints:
         constraints_name = '_constraints'
     else:
