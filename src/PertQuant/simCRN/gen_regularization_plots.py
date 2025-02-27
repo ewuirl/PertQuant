@@ -80,10 +80,12 @@ def gen_regularization_plots_main():
 
     # Take a look at the raw data
     print('Plotting raw data')
-    raw_title=f'D=B=T={N} {case_title} Raw Data'
+    raw_title=f'{case_title} Raw Data'
     raw_save_file = f'{N}-{M}-{L}_{case}_raw-data{suffix}'
     if N==10:
         y_raw_title=0.89
+    elif N==2:
+        y_raw_title=0.92
     else:
         y_raw_title=0.9
     raw_data_plot = plot_raw_data(settings_dict, raw_title, y_raw_title, \
@@ -94,13 +96,17 @@ def gen_regularization_plots_main():
     # Get partitioned data
     A_out_array = settings_dict['A_out_array']
     Ci_array = settings_dict['Ci_array']
+    # if N==2:
+    #     dataset_csv = pd.read_csv(f'{N}-{M}-{L}_{case}_dataset_partitions_MLP.csv', \
+    #         index_col=0)
+    # else:
     dataset_csv = pd.read_csv(f'{N}-{M}-{L}_{case}_dataset_partitions{suffix}.csv', \
         index_col=0)
     data_dict = get_partitioned_data(A_out_array, Ci_array, dataset_csv)
 
     # Plot normalized data
     print('Plotting normalized data')
-    normalized_title = f'D=B=T={N} {case_title} Normalized Data'
+    normalized_title = f'{case_title} Normalized Data'
     normalized_save_file = f'{N}-{M}-{L}_{case}_normalized-data{suffix}'
     normalized_data_plot = plot_normalized_data((A_out_array, Ci_array), \
         data_dict[4000], normalized_title, y_raw_title, \

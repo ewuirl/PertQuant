@@ -86,6 +86,60 @@ def calc_X_conservation(Xi_array, Xf_array, XY_array, XZ_array, XX_array, \
 
     return X_conservation_F
 
+def calc_X_conservation_constraint(Xi_array, Xf_array, XY_array, XZ_array, XX_array, \
+    X_connected):
+    ''' This function calculates (Xi - Xf - {XY} - {XZ} - {X})^2  in order to 
+    minimize the equation (Xi - Xf - {XY} - {XZ} - {X})^2 = 0.
+    Parameters:
+    Xi_array (arr): a 1xI array of X initial concentrations
+    Xf_array (arr): a 1xI array of X final concentrations
+    XY_array (arr): a IxJ array of XY concentrations
+    XZ_array (arr): a IxK array of XZ concentrations
+    XX_array (arr): a IxI array of XX concentrations
+    X_connected (arr): a 1xI boolean array of whether Xi is connected to the 
+        chemical reaction network
+
+    Returns:
+    X_conservation_F_array (arr): a 1xF (F <= I) array of conservation equations.
+    '''
+    # Add the {XiY}, {XiZ}, and {XiX} contributions
+    XY_sum = np.sum(XY_array,axis=1)
+    XZ_sum = np.sum(XZ_array,axis=1)
+    XX_sum = np.sum(XX_array,axis=1)
+    # Compute the conservation equations. 
+    X_conservation = Xi_array - Xf_array - XY_sum - XZ_sum - XX_sum
+    # Return the X concentrations that participate in the network
+    X_conservation_connected_array = X_conservation[X_connected]
+    
+    return X_conservation_connected_array
+
+def calculate_conservation_constraints(x_array, Ai_array, Bi_array, Ci_array, \
+    set_sizes, K_array_list, ABC_connected, ABC_nonzero, duplex_nonzero):
+    # Unpack K_arrays
+    KAB_array, KBC_array, KAC_array, KAA_array, KBB_array, KCC_array \
+    = K_array_list
+    
+    # Unpack ABC_connected
+    A_connected, B_connected, C_connected = ABC_connected
+
+    # Unpack x_array
+    Af_array, Bf_array, Cf_array, AB_array, BC_array, AC_array, \
+    AA_array, BB_array, CC_array = unpack_x_array(x_array, N, M, L, \
+        ABC_nonzero, duplex_nonzero)
+
+    # Calculate the A conservation equations
+    A_conservation = calc_X_conservation_constraint(Ai_array, \
+        Af_array, AB_array, AC_array, AA_array, A_connected)
+    # Calculate the B conservation equations
+    B_conservation = calc_X_conservation_constraint(Bi_array, \
+        Bf_array, np.transpose(AB_array), BC_array, BB_array, B_connected)
+    # Calculate the C conservation equations
+    C_conservation = calc_X_conservation_constraint(Ci_array, \
+        Cf_array, np.transpose(AC_array), np.transpose(BC_array), \
+        CC_array, C_connected)
+
+    return np.hstack((A_conservation, B_conservation, C_conservation))
+
 def get_X_connected(KXY_array, KXZ_array, KXX_array):
     ''' This function takes in the K arrays relevant to {X} and figures out
     which elements of X participate in the chemical reactio network.
@@ -510,8 +564,87 @@ def Keq(x_array, Ai_array, Bi_array, Ci_array, set_sizes, K_array_list, \
         C_connected)
 
     # Sum all the equation contributions
-    F_out = AB_F + BC_F + AC_F + AA_F + BB_F + CC_F + A_conservation_F \
-    + A_conservation_F + B_conservation_F + C_conservation_F
+    F_out = AB_F + BC_F + AC_F + AA_F + BB_F + CC_F + \
+    A_conservation_F + B_conservation_F + C_conservation_F
+    return F_out
+
+def Keq_nonlinear_constraint(x_array, Ai_array, Bi_array, Ci_array, set_sizes, \
+    K_array_list, ABC_connected, ABC_nonzero, duplex_nonzero):
+    '''Keq(x_array, Ai_array, Bi_array, Ci_array, set_sizes, K_array_list, 
+           ABC_connected, ABC_nonzero, duplex_nonzero)
+    The output of this function is intended to be used with 
+    scipy.optimize.minimize. It represents a system of equations for a DNA 
+    chemical reaction network with 3 sets of strand species ({A}, {B}, {C}), 
+    which may have pairwise interactions to produce duplexes ({AB}, {BC, {AC}, 
+    {AA}, {BB}, {CC}). For example, the ith X strand and the jth Y strand may 
+    interact as Xi + Yj <-> XYij, with equilibrium constant KXYij. At 
+    equilibrium this interaction satisfies KXYij[Xf][Yf] - [XY] = 0. This 
+    conservation equality must be maintained: Xi - Xf - {XY} - {XZ} - {XX} = 0. 
+    Concentrations must also obey the following two inequalitys: 0 <= Xf <= Xi
+    and 0 <= XYij <= min(Xi, Yj). These inequalities are accounted for by 
+    generating bounds with gen_bounds to be used with scipy.optimize.minimize.
+
+    For every equilibrium equation with nonzero K, the function computes 
+    (KXYij[Xf][Yf] - [XY])^2. For every conservation equation the function 
+    computes (Xi - Xf - {XY} - {XZ} - {XX})^2. These are summed and output as 
+    F_out.
+
+    Parameters:
+    x_array (arr): a 1D array of concentrations for species that react in the 
+        CRN. [*A, *B, *C, *AB, *BC, *AC, *AA, *BB, *CC]
+    Ai_array (arr): a 1xL array of initial A concentrations
+    Bi_array (arr): a 1xL array of initial B concentrations
+    Ci_array (arr): a 1xL array of initial C concentrations
+    set_sizes (list): [N, M, L] where
+        N (int): the number of A species
+        M (int): the number of B species
+        L (int): the number of C species
+    K_array_list: [KAB_array, KBC_array, KAC_array, KAA_array, KBB_array, 
+        KCC_array] where
+        KXY_array (arr): a IxJ array of KXY association constants
+    ABC_connected (list): [A_connected, B_connected, C_connected] where
+        X_connected (arr): a 1D array of the indices of the connected A species
+    ABC_nonzero (list): [A_nonzero, B_nonzero, C_nonzero] where
+        A_nonzero (arr): a 1D array of the indices of the connected A species
+        B_nonzero (arr): a 1D array of the indices of the connected B species
+        C_nonzero (arr): a 1D array of the indices of the connected C species
+    duplex_nonzero (list): [KAB_nonzero, KBC_nonzero, KAC_nonzero, KAA_nonzero, 
+        KBB_nonzero, KCC_nonzero] where
+        KXY_nonzero (tuple): a tuple of arrays of the indices of the nonzero 
+            KXY_array values. 
+
+    Returns: 
+    F_out (float): the sum of the squares of the equilibrium and conservation
+        equations. It should equal 0 at equilibrium.
+    '''
+    # Unpack set sizes
+    N, M, L = set_sizes
+    # Unpack K_arrays
+    KAB_array, KBC_array, KAC_array, KAA_array, KBB_array, KCC_array = K_array_list
+    # Unpack ABC_connected
+    A_connected, B_connected, C_connected = ABC_connected
+
+    # Unpack x_array
+    Af_array, Bf_array, Cf_array, AB_array, BC_array, AC_array, AA_array, \
+    BB_array, CC_array = unpack_x_array(x_array, N, M, L, ABC_nonzero, \
+        duplex_nonzero)
+
+    # Calculate the equilibrium equation contributions
+    # Calculate the AB equations
+    AB_F = calc_XY_equilibrium(Af_array, Bf_array, AB_array, KAB_array)
+    # Calculate the BC equations
+    BC_F = calc_XY_equilibrium(Bf_array, Cf_array, BC_array, KBC_array)
+    # Calculate the AC equations
+    AC_F = calc_XY_equilibrium(Af_array, Cf_array, AC_array, KAC_array)
+    # Calculate the AA equations
+    AA_F = calc_XX_equilibrium(Af_array, AA_array, KAA_array)
+    # Calculate the AA equations
+    BB_F = calc_XX_equilibrium(Bf_array, BB_array, KBB_array)
+    # Calculate the AA equations
+    CC_F = calc_XX_equilibrium(Cf_array, CC_array, KCC_array)
+
+    # Sum all the equation contributions
+    F_out = AB_F + BC_F + AC_F + AA_F + BB_F + CC_F 
     return F_out
 
 def calc_A_measured(xf_array, Ai_array, N, M, ABC_nonzero, duplex_nonzero):

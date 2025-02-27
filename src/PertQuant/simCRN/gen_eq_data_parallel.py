@@ -7,6 +7,7 @@ import os
 import argparse
 import platform
 from scipy.optimize import minimize
+from scipy.optimize import NonlinearConstraint
 from PertQuant.simCRN.read_gen_eq_data_settings import read_array
 from PertQuant.simCRN.read_gen_eq_data_settings import read_eq_data_settings
 from PertQuant.simCRN.gen_eq_data import gen_Ci_array
@@ -21,10 +22,12 @@ from PertQuant.simCRN.equilibrium_v3 import gen_AB_bounds
 from PertQuant.simCRN.equilibrium_v3 import add_C_bounds
 from PertQuant.simCRN.equilibrium_v3 import Keq
 from PertQuant.simCRN.equilibrium_v3 import calc_A_measured
+from PertQuant.simCRN.equilibrium_v3 import Keq_nonlinear_constraint
+from PertQuant.simCRN.equilibrium_v3 import calculate_conservation_constraints
 
 def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
     K_array_list, ABC_connected, ABC_nonzero, duplex_nonzero, ABC_guess,\
-    fixed_bounds, method, guess):
+    fixed_bounds, method, guess, use_constraints):
     '''This function generates random Ci concentrations between [Cmin, Cmax] and
     uses the given args with the function Keq and scipy.optimize.minimize to
     find the equilibrium concentrations of the reactant species. A_measured for 
@@ -88,17 +91,27 @@ def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
     else:
         pass
 
+    Keq_args = (Ai_array, Bi_array, Ci_array, set_sizes, K_array_list, \
+        ABC_connected, ABC_nonzero, duplex_nonzero)
+
     # Calculate x_array that solves Keq
-    result = minimize(Keq, x_array, (Ai_array, Bi_array, Ci_array, set_sizes, \
-            K_array_list, ABC_connected, ABC_nonzero, duplex_nonzero), \
-        method=method, bounds=bounds_list)
+    if use_constraints:
+        constraints={'type':'eq','fun': calculate_conservation_constraints, \
+        'args': Keq_args}
+        result = minimize(Keq_nonlinear_constraint, x_array, \
+            Keq_args, method=method, bounds=bounds_list, constraints=constraints)
+    else:
+        
+        result = minimize(Keq, x_array, Keq_args, method=method, \
+            bounds=bounds_list)
     x_final = result.x
 
     # Calculate the measured A concentration
     A_measured = calc_A_measured(x_final, Ai_array, N, M, ABC_nonzero, \
         duplex_nonzero)
 
-    return(Ci_array, A_measured)    
+    return(Ci_array, A_measured)
+
 
 def gen_eq_data_parallel_main():
     rand.seed()
@@ -117,6 +130,8 @@ def gen_eq_data_parallel_main():
         scipy.optimize.minimize. Defaults to SLSQP.')
     parser.add_argument('--guess', type=bool, help='Whether to guess equally \
         distributed concentrations or zero concentrations. Defaults to False (zero).')
+    paers.add_argument('--constraints', type=bool, help='Whether to use nonlinear \
+        constraints. Defaults to False.')
     args = parser.parse_args()
 
     # Check the platform
@@ -153,6 +168,11 @@ def gen_eq_data_parallel_main():
         guess = args.guess 
     else:
         guess = False
+
+    if args.constraints:
+        use_constraints = args.constraints 
+    else:
+        use_constraints = False
     
     # Read in settings
     settings_dict = read_eq_data_settings(settings_file, quiet=quiet)
@@ -214,7 +234,8 @@ def gen_eq_data_parallel_main():
     with concurrent.futures.ProcessPoolExecutor() as executor:
         results = {executor.submit(gen_A_measured, Cmin, Cmax, x_array, Ai_array, \
             Bi_array, set_sizes, K_array_list, ABC_connected, ABC_nonzero, \
-            duplex_nonzero, ABC_guess, fixed_bounds, method, guess): i for i in N_range}
+            duplex_nonzero, ABC_guess, fixed_bounds, method, guess, \
+            use_constraints): i for i in N_range}
         for result in concurrent.futures.as_completed(results):
             Ci_all_array[index,:], Am_array[index,:] = result.result()
             index+=1
@@ -227,11 +248,17 @@ def gen_eq_data_parallel_main():
     if quiet==0:
         print('Saving results.')
     if guess:
-        data_file_name = f'{save_folder}{sep}{save_file_name}_data_guess.txt'
-        time_file_name = f'{save_file_name}_data_guess.txt'
+        guess_name = '_guess'
     else:
-        data_file_name = f'{save_folder}{sep}{save_file_name}_data.txt'
-        time_file_name = f'{save_file_name}_data.txt'
+        guess_name = ''
+        
+    if use_constraints:
+        constraints_name = '_constraints'
+    else:
+        constraints_name = ''
+
+    data_file_name = f'{save_folder}{sep}{save_file_name}_data{guess_name}{constraints_name}.txt'
+    time_file_name = f'{save_file_name}_data{guess_name}{constraints_name}.txt'
         
     gen_detailed_eq_data_file(data_file_name, Ci_all_array, \
         Am_array, Cmin, Cmax, Bi_array, Ai_array, KAB_array, KBC_array, \

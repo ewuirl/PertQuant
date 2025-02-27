@@ -25,10 +25,8 @@ def gen_Ti_specific_metrics_main():
     parser.add_argument('data_file_name', type=str, help='The name of the data_file \
         to use')
     parser.add_argument('model_type', type=str, help='The ML regularization model.')
-    parser.add_argument('--MAE', type=str, help='Whether to generate MAE metrics. Defaults \
-        to False.')
-    parser.add_argument('--r2', type=str, help='Whether to generate r2 metrics. Defaults \
-        to False.')
+    parser.add_argument('--MAE', action='store_true', help='Whether to generate MAE metrics')
+    parser.add_argument('--r2', action='store_true', help='Whether to generate R^2 metrics')
     parser.add_argument('--partition', type=str, help='The name of the data \
         partition csv.')
     
@@ -42,17 +40,8 @@ def gen_Ti_specific_metrics_main():
     model_type = args.model_type
     parent_folder = os.getcwd()
 
-    if args.MAE:
-        MAE=args.MAE
-    else:
-        MAE=False
 
-    if args.r2:
-        r2=args.r2
-    else:
-        r2=False
-
-    if MAE or r2:
+    if args.MAE or args.r2:
         # Read in data
         settings_dict = read_detailed_eq_data_file(f'{case_name}_data{suffix}.txt')
         N = settings_dict['N']
@@ -99,7 +88,7 @@ def gen_Ti_specific_metrics_main():
     else:
         print('No metric provided')
     
-    if MAE:
+    if args.MAE:
         # Get Ti-specific MAE
         print('Getting Ti-specific MAE')
         
@@ -114,7 +103,7 @@ def gen_Ti_specific_metrics_main():
     else:
         pass 
 
-    if r2:
+    if args.r2:
         # Get Ti-specific r2
         print('Getting Ti-specific r2')
         r2_df = pd.DataFrame(columns=Ti_columns)
