@@ -5,6 +5,7 @@ import time
 import pandas as pd
 import pickle
 from sklearn.preprocessing import StandardScaler
+from shutil import move as move_file
 
 def read_detailed_eq_data_file(file_name):
     with open(file_name, 'r') as file:
@@ -162,9 +163,9 @@ def plot_normalized_data(data_all, data_train, title, y_title, save_file='', sav
     return (fig, ax)
 
 def save_grid_search_results(results_df, index, grid_search, dataset_size, refit, 
-    N, M, L, case, model_type, scoring_list, save_folder='', suffix=''):
+    N, M, L, case, model_type, scoring_list, sep, save_folder='', suffix=''):
     if len(save_folder) > 0:
-        save_folder=f'{save_folder}/'
+        save_folder=f'{save_folder}{sep}'
     # Save info about the best model to the dataframe
     print('Best 5 fold cross validated model parameters')
     print(grid_search.best_params_)
@@ -181,7 +182,19 @@ def save_grid_search_results(results_df, index, grid_search, dataset_size, refit
     
     # Save grid search cross validation results
     cv_results_df = pd.DataFrame(grid_search.cv_results_)
-    cv_results_df.to_csv(f'{save_folder}{N}-{M}-{L}_{case}_cv_results_{model_type}_{dataset_size}{suffix}.csv')
+    cv_save_file = f'{save_folder}{N}-{M}-{L}_{case}_cv_results_{model_type}_{dataset_size}{suffix}.csv'
+    try:
+        cv_results_df.to_csv(cv_save_file)
+    except:
+        # If the path is too long, to_csv has an issue.
+        save_folder_list = save_folder.split(sep)
+        move_folder = save_folder_list[-2]
+        parent_folder = sep.join(save_folder_list[:-2])
+        # Temporarily save the csv in the parent folder
+        cv_temp_save_file = f'{parent_folder}{sep}{N}-{M}-{L}_{case}_cv_results_{model_type}_{dataset_size}{suffix}.csv'
+        cv_results_df.to_csv(cv_temp_save_file)
+        # Move it to the save folder
+        move_file(cv_temp_save_file, move_folder)
     best_model = cv_results_df[cv_results_df[f'rank_test_{refit}']==1]
     
     grid_metric_list = ['mean','std','rank']
@@ -405,6 +418,7 @@ def plot_metric_summary(results_df, case, model_type, metric, save_file, width=8
     test_color='orange', cv_color='gray', alpha=1, std_err=True):
     metric = metric.lstrip('neg_')
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE'}
+    axis_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE (A.U.)'}
 
     dataset_size_array = results_df['dataset_size'].to_numpy()
     mean_cv_metric = results_df[f'mean_test_{metric}'].to_numpy()
@@ -427,10 +441,10 @@ def plot_metric_summary(results_df, case, model_type, metric, save_file, width=8
     elif metric=='mean_absolute_error':
         ax.plot([0,max(dataset_size_array)], [0,0], color='k', linestyle=(0,(10,5)),zorder=0)
     
-    ax.set_xlabel("Train Dataset Size")
+    ax.set_xlabel("Train Dataset Size, $N_s$")
     
-    ax.set_ylabel(metric_dictionary[metric])
-    ax.set_title(f'{case}: {metric_dictionary[metric]} for {model_type}s and Varying Train Dataset Size')
+    ax.set_ylabel(axis_dictionary[metric])
+    ax.set_title(f'{case}: {metric_dictionary[metric]} for\n{model_type}s and Varying Train Dataset Size')
     ax.set_xscale(xscale)
     
     if save and len(save_file)>0:
@@ -446,6 +460,7 @@ def plot_metric_best_vs_alt(results_df, alt_model_df, case, model_type, metric, 
     train_color='#0072B2', test_color='orange', alpha=1):
     metric = metric.lstrip('neg_')
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE'}
+    axis_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE (A.U.)'}
 
     dataset_size_array = results_df['dataset_size'].to_numpy()
     train_metric = results_df[f'train_{metric}'].to_numpy()
@@ -469,10 +484,10 @@ def plot_metric_best_vs_alt(results_df, alt_model_df, case, model_type, metric, 
     elif metric=='mean_absolute_error':
         ax.plot([0,max(dataset_size_array)], [0,0], color='k', linestyle=(0,(10,5)), zorder=0)
     
-    ax.set_xlabel("Train Dataset Size")
+    ax.set_xlabel("Train Dataset Size, $N_s$")
     
-    ax.set_ylabel(metric_dictionary[metric])
-    ax.set_title(f'{case}: {metric_dictionary[metric]} for {model_type}s and Varying Train Dataset Size')
+    ax.set_ylabel(axis_dictionary[metric])
+    ax.set_title(f'{case}: {metric_dictionary[metric]} for\n{model_type}s and Varying Train Dataset Size')
     ax.set_xscale(xscale)
     
     if save and len(save_file)>0:

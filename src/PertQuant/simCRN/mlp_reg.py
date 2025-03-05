@@ -9,6 +9,7 @@ import pickle
 import argparse
 import platform
 from contextlib import redirect_stdout
+from shutil import move as move_file
 from PertQuant.simCRN.multivariate_reg_v2 import read_detailed_eq_data_file
 from PertQuant.simCRN.multivariate_reg_v2 import plot_raw_data
 from PertQuant.simCRN.multivariate_reg_v2 import partition_data
@@ -196,7 +197,7 @@ def mlp_reg_main():
         print('Saving grid search results')
         save_grid_search_results(results_df, i, grid_search_list[i], \
             dataset_size_list[i], refit_MLP, N, M, L, case, model_type, \
-            scoring_MLP, save_folder=save_folder, suffix=suffix)
+            scoring_MLP, sep, save_folder=save_folder, suffix=suffix)
 
         # Predict with the best model
         print('Predicting with best fit model (R^2)')
