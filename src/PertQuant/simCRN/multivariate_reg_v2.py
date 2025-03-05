@@ -190,11 +190,11 @@ def save_grid_search_results(results_df, index, grid_search, dataset_size, refit
         save_folder_list = save_folder.split(sep)
         move_folder = save_folder_list[-2]
         parent_folder = sep.join(save_folder_list[:-2])
-        # Temporarily save the csv in the parent folder
+        # Save the csv in the parent folder instead
         cv_temp_save_file = f'{parent_folder}{sep}{N}-{M}-{L}_{case}_cv_results_{model_type}_{dataset_size}{suffix}.csv'
         cv_results_df.to_csv(cv_temp_save_file)
-        # Move it to the save folder
-        move_file(cv_temp_save_file, move_folder)
+        # # Move it to the save folder
+        # move_file(cv_temp_save_file, f'{parent_folder}{sep}{move_folder}')
     best_model = cv_results_df[cv_results_df[f'rank_test_{refit}']==1]
     
     grid_metric_list = ['mean','std','rank']

@@ -9,7 +9,7 @@ import pickle
 import argparse
 import platform
 from contextlib import redirect_stdout
-from shutil import move as move_file
+# from shutil import move as move_file
 from PertQuant.simCRN.multivariate_reg_v2 import read_detailed_eq_data_file
 from PertQuant.simCRN.multivariate_reg_v2 import plot_raw_data
 from PertQuant.simCRN.multivariate_reg_v2 import partition_data
