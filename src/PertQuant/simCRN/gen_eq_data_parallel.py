@@ -116,6 +116,7 @@ def gen_A_measured(Cmin, Cmax, x_array, Ai_array, Bi_array, set_sizes, \
 
 
 def gen_eq_data_parallel_main():
+    start = time.perf_counter()
     rand.seed()
     # Argument parser
     parser = argparse.ArgumentParser(description='Generates eq_data ')    
@@ -278,8 +279,8 @@ def gen_eq_data_parallel_main():
     if quiet==0:
         print('Computing Am.')
     laps = [lap]*int(np.floor(N_runs/lap)) + [N_runs % lap]
-    start = time.perf_counter()
-    lap_time = start
+    simulation_start = time.perf_counter()
+    lap_time = simulation_start
     dataset_size = 0
     for lap in laps:
         N_range = range(lap)
@@ -301,7 +302,7 @@ def gen_eq_data_parallel_main():
         if quiet == 0:
             lap_time = time.perf_counter() 
             print(f'Finished with {dataset_size}/{N_runs}\tTime elapsed: \
-                {lap_time-start} second(s)')
+                {str(datetime.timedelta(seconds=lap_time-simulation_start))}')
     
     time_file_name = f'{save_file_name}_data{guess_name}{constraints_name}.txt'
     end=time.perf_counter()
@@ -309,12 +310,12 @@ def gen_eq_data_parallel_main():
     if args.time_file: 
         time_file = args.time_file.strip('"')
         with open(time_file,'a') as file:
-            file.write(f'\n{time_file_name}\t{N_runs} runs\t{end-start}')
+            file.write(f'\n{time_file_name}\t{N_runs} runs\t{end-simulation_start}')
     else:
         pass
         
     if quiet==0:
-        print(f"Simulation time: {str(datetime.timedelta(seconds=end-start))}")
+        print(f"Total time: {str(datetime.timedelta(seconds=end-start))}")
 
 if __name__ == '__main__':
     gen_eq_data_parallel_main()
