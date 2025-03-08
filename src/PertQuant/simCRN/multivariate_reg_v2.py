@@ -5,7 +5,7 @@ import time
 import pandas as pd
 import pickle
 from sklearn.preprocessing import StandardScaler
-from shutil import move as move_file
+# from shutil import move as move_file
 
 def read_detailed_eq_data_file(file_name):
     with open(file_name, 'r') as file:
@@ -49,9 +49,11 @@ def read_detailed_eq_data_file(file_name):
                 index += 1
             else:
                 header = False
-            
-        Ci_array = np.zeros((settings_dict['N_runs'],settings_dict['L']))
-        A_out_array = np.zeros((settings_dict['N_runs'],settings_dict['N']))
+
+        N_runs = len(lines)-index
+        settings_dict['N_runs'] = N_runs            
+        Ci_array = np.zeros((N_runs,settings_dict['L']))
+        A_out_array = np.zeros((N_runs, settings_dict['N']))
         
         settings_dict["Ci_array"] = Ci_array
         settings_dict["A_out_array"] = A_out_array
@@ -497,3 +499,227 @@ def plot_metric_best_vs_alt(results_df, alt_model_df, case, model_type, metric, 
     else:
         pass
     return (fig, ax)
+
+def get_avg_Ti(Ti_df, D, single, data_type):
+    if single == 1:
+        Ti_all = Ti_df.loc[:,f'{data_type} T2':f'{data_type} T{D}'].to_numpy()
+        Ti_single = Ti_df.loc[:,f'{data_type} T1'].to_numpy()
+    else:
+        Ti_all = Ti_df.loc[:,f'{data_type} T1':f'{data_type} T{D-1}'].to_numpy()
+        Ti_single = Ti_df.loc[:,f'{data_type} T{D}'].to_numpy()
+    Ti_all_mean = np.mean(Ti_all,axis=1)
+    Ti_all_std = np.std(Ti_all,axis=1)
+    return np.vstack((Ti_single, Ti_all_mean, Ti_all_std))
+
+
+def plot_T1_avg_case_2(dataset_size_array, D, Ti_dict_avg, base_case, strengths, \
+    metric, colors, linestyles, title, save_file='', save=False, width=15, \
+    height=6, xscale='log', legend_loc=(0.99,1.03), end=0, match_axis=False):
+    
+    metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE (A.U.)'}
+
+    if match_axis and len(legend_loc)==0:
+        width = 11
+    else:
+        pass
+    
+    fig, ax = plt.subplots(1, 2, figsize=(width, height),layout='constrained')
+    if end == 0:
+        end = len(dataset_size_array)
+    
+    ax[0].plot(dataset_size_array, Ti_dict_avg[base_case][0,:], color=colors[0], \
+        linestyle=linestyles[0], marker='.', label='Case 2')
+    ax[1].errorbar(dataset_size_array, Ti_dict_avg[base_case][1,:], \
+        yerr=Ti_dict_avg[base_case][2,:], color=colors[0], linestyle=linestyles[0], \
+        fmt='.', capsize=3, label='Case 2')
+    for i, strength in enumerate(strengths):
+        case = f'{base_case}a_KBC-{strength}_1'
+        ax[0].plot(dataset_size_array, Ti_dict_avg[case][0,:], color=colors[1], \
+            marker='.', linestyle=linestyles[1+i], \
+            label=f'Case 2a, $K_{{BT}}={strength}$')
+        ax[1].errorbar(dataset_size_array, Ti_dict_avg[case][1,:], \
+            yerr=Ti_dict_avg[case][2,:], color=colors[1], \
+            linestyle=linestyles[1+i], fmt='.', capsize=3, \
+            label=f'Case 2a, $K_{{BT}}={strength}$')
+    top=0
+    bottom = 1  
+    
+    for axis in ax:
+        if metric=='r2':
+            axis.plot([0,max(dataset_size_array)], [1,1], color='k', \
+                linestyle=(0,(10,5)), zorder=0)
+        elif metric=='mean_absolute_error':
+            axis.plot([0,max(dataset_size_array)], [0,0], color='k', \
+                linestyle=(0,(10,5)), zorder=0)
+    
+        axis.set_xlabel("Train Dataset Size, $N_s$")
+        axis.set_xscale(xscale)
+        ylims = axis.get_ylim()
+        bottom = min(ylims[0], bottom)
+        top = max(ylims[1], top)
+        
+    if match_axis:
+        for axis in ax:
+            axis.set_ylim(top=top,bottom=bottom)
+        matched='_matched_axis'
+    else:
+        matched = ''
+
+    if len(legend_loc)==0:
+        ax[1].legend(loc='best')
+    else:
+        ax[1].legend(bbox_to_anchor=legend_loc)   
+    ax[0].set_ylabel(f'$T_1$ {metric_dictionary[metric]}')
+    ax[1].set_ylabel(f'$T_2$-$T_{{{D}}}$ mean {metric_dictionary[metric]}')
+    fig.suptitle(title)
+    
+    if save and len(save_file)>0:
+        fig.savefig(f"{save_file}{matched}.png", bbox_inches="tight")
+    elif save and len(save_file)==0:
+        fig.savefig(f"{title}.png", bbox_inches="tight")
+    else:
+        pass
+    return (fig, ax)
+
+def plot_T1_avg_case_3(dataset_size_array, D, Ti_dict_avg, base_case, strengths, \
+    metric, colors, linestyles, title, save_file='', save=False, width=15, \
+    height=6, xscale='log', legend_loc=(0.99,1.03), end=0, match_axis=False):
+    
+    metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE (A.U.)'}
+
+    if match_axis and len(legend_loc)==0:
+        width = 11
+    else:
+        pass
+    
+    fig, ax = plt.subplots(1, 2, figsize=(width, height),layout='constrained')
+    if end == 0:
+        end = len(dataset_size_array)
+
+    ax[0].plot(dataset_size_array, Ti_dict_avg[base_case][0,:], color=colors[0], \
+        linestyle=linestyles[0], marker='.', label='Case 3')
+    ax[1].errorbar(dataset_size_array, Ti_dict_avg[base_case][1,:], \
+        yerr=Ti_dict_avg[base_case][2,:], color=colors[0], linestyle=linestyles[0], \
+        fmt='.', capsize=3, label='Case 3')
+    for i, strength in enumerate(strengths):
+        case = f'{base_case}a_KBC-{strength}'
+        ax[0].plot(dataset_size_array, Ti_dict_avg[case][0,:], color=colors[1], \
+            marker='.', linestyle=linestyles[1+i], \
+            label=f'Case 3a, $K_{{BT}}={strength}$')
+        ax[1].errorbar(dataset_size_array, Ti_dict_avg[case][1,:], \
+            yerr=Ti_dict_avg[case][2,:], color=colors[1], \
+            linestyle=linestyles[1+i], fmt='.', capsize=3, \
+            label=f'Case 3a, $K_{{BT}}={strength}$')
+        case = f'{base_case}b_KBC-{strength}_1'
+        ax[0].plot(dataset_size_array, Ti_dict_avg[case][0,:], \
+            color=colors[2], marker='.', linestyle=linestyles[1+i], \
+            label=f'Case 3b, $K_{{BT}}={strength}$')
+        ax[1].errorbar(dataset_size_array, Ti_dict_avg[case][1,:], \
+            yerr=Ti_dict_avg[case][2,:], color=colors[2], linestyle=linestyles[1+i], \
+            fmt='.', capsize=3, label=f'Case 3b, $K_{{BT}}={strength}$')
+        
+    top=0
+    bottom = 1  
+    
+    for axis in ax:
+        if metric=='r2':
+            axis.plot([0,max(dataset_size_array)], [1,1], color='k', \
+                linestyle=(0,(10,5)), zorder=0)
+        elif metric=='mean_absolute_error':
+            axis.plot([0,max(dataset_size_array)], [0,0], color='k', \
+                linestyle=(0,(10,5)), zorder=0)
+    
+        axis.set_xlabel("Train Dataset Size, $N_s$")
+        axis.set_xscale(xscale)
+        ylims = axis.get_ylim()
+        bottom = min(ylims[0], bottom)
+        top = max(ylims[1], top)
+        
+    if match_axis:
+        for axis in ax:
+            axis.set_ylim(top=top,bottom=bottom)
+        matched='_matched_axis'
+    else:
+        matched = ''
+
+    if len(legend_loc)==0:
+        ax[1].legend(loc='best')
+    else:
+        ax[1].legend(bbox_to_anchor=legend_loc)   
+    ax[0].set_ylabel(f'$T_1$ {metric_dictionary[metric]}')
+    ax[1].set_ylabel(f'$T_2$-$T_{{{D}}}$ mean {metric_dictionary[metric]}')
+    fig.suptitle(title)
+    
+    if save and len(save_file)>0:
+        fig.savefig(f"{save_file}{matched}.png", bbox_inches="tight")
+    elif save and len(save_file)==0:
+        fig.savefig(f"{title}.png", bbox_inches="tight")
+    else:
+        pass
+    return (fig, ax)
+
+
+def plot_TD_avg(dataset_size_array, D, Ti_dict_avg, base_case, names, strengths, \
+    metric, colors, linestyles, title, save_file='', save=False, width=15, height=6, \
+    xscale='log', legend_loc=(0.99,1.03), end=0, match_axis=False):
+
+    metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE (A.U.)'}
+    
+    if match_axis and len(legend_loc)==0:
+        width = 11
+    else:
+        pass
+
+    fig, ax = plt.subplots(1, 2, figsize=(width, height),layout='constrained')
+    if end == 0:
+        end = len(dataset_size_array)
+    
+    for i, strength in enumerate(strengths):
+        for j, name in enumerate(names):
+            case = f'{base_case}_KBC-{strength}_{name}'
+            ax[1].plot(dataset_size_array[:end], Ti_dict_avg[case][0,:end], \
+                color=colors[3+j], marker='.', linestyle=linestyles[1+i], \
+                label=f'$K_{{BT}}={strength}$, $N_{{BT}}={name}$')
+            ax[0].errorbar(dataset_size_array[:end], Ti_dict_avg[case][1,:end], \
+                yerr=Ti_dict_avg[case][2,:end], color=colors[3+j], \
+                linestyle=linestyles[1+i], fmt='.', capsize=3, \
+                label=f'$K_{{BT}}={strength}$, $N_{{BT}}={name}$')
+
+    top=0
+    bottom = 1  
+    
+    for axis in ax:
+        if metric=='r2':
+            axis.plot([0,max(dataset_size_array)], [1,1], color='k', \
+                linestyle=(0,(10,5)), zorder=0)
+        elif metric=='mean_absolute_error':
+            axis.plot([0,max(dataset_size_array)], [0,0], color='k', \
+                linestyle=(0,(10,5)), zorder=0)
+        axis.set_xlabel("Train Dataset Size, $N_s$")
+        axis.set_xscale(xscale)
+        ylims = axis.get_ylim()
+        bottom = min(ylims[0], bottom)
+        top = max(ylims[1], top)
+    if match_axis:
+        for axis in ax:
+            axis.set_ylim(top=top,bottom=bottom)
+        matched='_matched_axis'
+    else:
+        matched = ''
+    ax[1].set_ylabel(f'$T_{{{D}}}$ {metric_dictionary[metric]}')
+    ax[0].set_ylabel(f'$T_1$-$T_{{{D-1}}}$ mean {metric_dictionary[metric]}')
+    if len(legend_loc)==0:
+        ax[0].legend(loc='best')
+    else:
+        ax[1].legend(bbox_to_anchor=legend_loc)   
+    
+    fig.suptitle(title)
+    
+    if save and len(save_file)>0:
+        fig.savefig(f"{save_file}{matched}.png", bbox_inches="tight")
+    elif save and len(save_file)==0:
+        fig.savefig(f"{title}.png", bbox_inches="tight")
+    else:
+        pass
+    return (fig, ax)
+

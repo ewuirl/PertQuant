@@ -142,31 +142,25 @@ def compose_association_array(N, M, L, KAB_array, KBC_array, KAC_array, KAA_arra
     association_array = np.triu(association_array)+np.triu(association_array,k=1).transpose()
     return association_array
 
-def gen_detailed_eq_data_file(file_name, Ci_all_array, Am_array, Cmin, Cmax, \
-    Bi_array, Ai_array, KAB_array, KBC_array, KAC_array, KAA_array=[], \
-    KBB_array=[], KCC_array=[], measured=True):
+def initiate_detailed_eq_data_file(file_name, Cmin, Cmax, N_runs, Ai_array, \
+    Bi_array, L, KAB_array, KBC_array, KAC_array, KAA_array=[], KBB_array=[], \
+    KCC_array=[], measured=True):
     '''This function takes data consisting of:
-    Ci_all_array = N_runs x L array of initial C concentrations
-    Am_array = N_runs x N array of A measured concentrations calculated based on
-               the initial C conentrations.
     Cmin = the minimum concentration a strand C can take
     Cmax = the maximum concentration a strand C can take
     Ai = the initial concentration of strand A, equivalent to the max Am can be
 
-    It writes the data to a file named file_name and prints a message when it is
-    done. The first 6 rows give L (the number of C strands), N (the number of A
-    strands), and N_runs (the number of computed runs), Cmin, Cmax, and Ai. Each
-    row after that consists of the Ci values and Am values for a run, separated 
-    by tabs.'''
-    N = len(Am_array[0])
+    It creates the header for a data file named file_name. The first 6 rows give 
+    L (the number of C strands), N (the number of A strands), and N_runs (the 
+    number of computed runs), Cmin, Cmax, and Ai. Each row after that consists 
+    of the Ci values and Am values for a run, separated by tabs.'''
+
+    N = len(Ai_array)
     M = len(Bi_array)
-    L = len(Ci_all_array[0])
-    N_runs = len(Ci_all_array)
     with open(file_name, 'w') as save_file:
         save_file.write(f'# N = {N:d} \n')
         save_file.write(f'# M = {M:d} \n')
         save_file.write(f'# L = {L:d} \n')
-        save_file.write(f'# N_runs = {N_runs:d} \n')
         save_file.write(f'# Cmin = {Cmin} \n')
         save_file.write(f'# Cmax = {Cmax} \n')
         save_file.write(f'# Measured = {measured} \n# ')
@@ -180,13 +174,24 @@ def gen_detailed_eq_data_file(file_name, Ci_all_array, Am_array, Cmin, Cmax, \
 
         # Write the data to the file
         save_file.write('\n# \n# Data')
+
+
+def append_data(file_name, Ci_all_array, Am_array):
+    '''This function takes data consisting of:
+    Ci_all_array = N_runs x L array of initial C concentrations
+    Am_array = N_runs x N array of A measured concentrations calculated based on
+               the initial C conentrations.
+    
+    It writes the data to a file named file_name and prints a message when it is
+    done. Each row after the header consists of the Ci values and Am values for 
+    a run, separated by tabs.'''
+
+    with open(file_name, 'a') as save_file:
         for i in range(len(Ci_all_array)):
             # write the Ci and generated Am to a line
             save_file.write('\n'+'\t'.join(Ci_all_array[i,:].astype(str)))
             save_file.write('\t')
             save_file.write('\t'.join(Am_array[i,:].astype(str)))
-
-    print('Done writing file')
 
 def gen_Ap(x_array, x_array_C, Cmin, Cmax, N_runs, *args, verbose=True, 
     measured=True):
