@@ -64,31 +64,73 @@ def read_detailed_eq_data_file(file_name):
             
     return settings_dict
 
-def plot_raw_data(settings_dict, title, y_title, save_file='', save=True):
+def plot_raw_data(settings_dict, title, y_title, save_file='', \
+    file_extension='png', save=True, buffer=0.05, layout=''):
     L = settings_dict['L']
     N = settings_dict['N']
     
     # Figure out the dimensions of the plot
     width = N*6.5
     height = L*5
-    fig, ax = plt.subplots(L,N,figsize=(width, height))
+    if constrained:
+        fig, ax = plt.subplots(L,N,figsize=(width, height), layout=layout)
+    else:
+        fig, ax = plt.subplots(L,N,figsize=(width, height))
     
     for i in range(L):
         for j in range(N):
             ax[i,j].scatter(settings_dict['A_out_array'][:,j], settings_dict['Ci_array'][:,i], marker='.', \
                            color='#56B4E9', alpha=0.5)
-            ax[i,j].set_ylabel(f"$T_{{{i+1}}}$"+ " initial conc.")
-            ax[i,j].set_xlabel(f"$D_{{{j+1}}}$"+ " measured conc.")
-            ax[i,j].set_xlim(left=0,right=settings_dict['Ai array'][j]+0.05)
-            ax[i,j].set_ylim(bottom=0,top=2.1)
+            ax[i,j].set_ylabel(f"$T_{{{i+1}}}$"+ " initial conc. (A.U.)")
+            ax[i,j].set_xlabel(f"$D_{{{j+1}}}$"+ " measured conc. (A.U.)")
+            ax[i,j].set_xlim(left=-buffer,right=settings_dict['Ai array'][j]+buffer)
+            ax[i,j].set_ylim(bottom=-buffer,top=2+buffer)
     fig.suptitle(title, y=y_title)
-    if save and len(save_file)>0:
-        fig.savefig(f"{save_file}.png", bbox_inches="tight")
-    elif save and len(save_file)==0:
-        fig.savefig(f"{title}.png", bbox_inches="tight")
+    if len(save_file)>0:
+        save_front = f"{save_file}"
     else:
-        pass
-    return (fig, ax)
+        save_front = f"{title}"
+    if len(layout)>0:
+        save_end = f"_{layout}.{file_extension}"
+    else :
+        save_end = f".{file_extension}"
+    if save:
+        fig.savefig(save_front+save_end, bbox_inches="tight")
+
+def plot_raw_data_flip(settings_dict, title, y_title, save_file='', \
+    file_extension='png', save=True,buffer=0.05, layout=''):
+    L = settings_dict['L']
+    N = settings_dict['N']
+    
+    # Figure out the dimensions of the plot
+    width = L*6.5
+    height = N*5
+
+    if constrained:
+        fig, ax = plt.subplots(N,L,figsize=(width, height), layout=layout)
+    else:
+        fig, ax = plt.subplots(N,L,figsize=(width, height))
+    
+    for i in range(L):
+        for j in range(N):
+            ax[j,i].scatter(settings_dict['Ci_array'][:,i], \
+                settings_dict['A_out_array'][:,j], marker='.', \
+                color='#56B4E9', alpha=0.5)
+            ax[j,i].set_xlabel(f"$T_{{{i+1}}}$"+ " initial conc. (A.U.)")
+            ax[j,i].set_ylabel(f"$D_{{{j+1}}}$"+ " measured conc. (A.U.)")
+            ax[j,i].set_ylim(bottom=-buffer,top=settings_dict['Ai array'][j]+buffer)
+            ax[j,i].set_xlim(left=-buffer,right=2+buffer)
+    fig.suptitle(title, y=y_title)
+    if len(save_file)>0:
+        save_front = f"{save_file}_flip"
+    else:
+        save_front = f"{title}_flip"
+    if len(layout)>0:
+        save_end = f"_{layout}.{file_extension}"
+    else :
+        save_end = f".{file_extension}"
+    if save:
+        fig.savefig(save_front+save_end, bbox_inches="tight")
 
 def partition_data(D_data, T_data, train_size, data_set_df, index_array, test=False):
     # make arrays for the new data
@@ -135,7 +177,8 @@ def get_partitioned_data(D_data, T_data, dataset_csv):
         data_dict[column_key]=(D_subset, T_subset)
     return data_dict
 
-def plot_normalized_data(data_all, data_train, title, y_title, save_file='', save=True):
+def plot_normalized_data(data_all, data_train, title, y_title, save_file='', \
+    file_extension='png', save=True, buffer=0.05, layout=''):
     scaler = StandardScaler()
     scaler.fit(data_train[0])
     scaled_data = scaler.transform(data_all[0])
@@ -145,23 +188,67 @@ def plot_normalized_data(data_all, data_train, title, y_title, save_file='', sav
     # Figure out the dimensions of the plot
     width = N*6.5
     height = L*5
-    fig, ax = plt.subplots(L,N,figsize=(width, height))
+    if constrained:
+        fig, ax = plt.subplots(L,N,figsize=(width, height), layout=layout)
+    else:
+        fig, ax = plt.subplots(L,N,figsize=(width, height))
     
     for i in range(L):
         for j in range(N):
             ax[i,j].scatter(scaled_data[:,j], data_all[1][:,i], marker='.', \
                            color='#56B4E9', alpha=0.5)
-            ax[i,j].set_ylabel(f"$T_{{{i+1}}}$"+ " initial conc.")
-            ax[i,j].set_xlabel(f"$D_{{{j+1}}}$"+ " measured conc.")
+            ax[i,j].set_ylabel(f"$T_{{{i+1}}}$"+ " initial conc. (A.U.)")
+            ax[i,j].set_xlabel(f"Normalized $D_{{{j+1}}}$"+ " measured conc.")
 #             ax[i,j].set_xlim(left=0,right=xmax)
-            ax[i,j].set_ylim(bottom=0,top=2.1)
+            ax[i,j].set_ylim(bottom=-buffer,top=2+buffer)
     fig.suptitle(title, y=y_title)
-    if save and len(save_file)>0:
-        fig.savefig(f"{save_file}.png", bbox_inches="tight")
-    elif save and len(save_file)==0:
-        fig.savefig(f"{title}.png", bbox_inches="tight")
+    if len(save_file)>0:
+        save_front = f"{save_file}"
     else:
-        pass
+        save_front = f"{title}"
+    if len(layout)>0:
+        save_end = f"_{layout}.{file_extension}"
+    else :
+        save_end = f".{file_extension}"
+    if save:
+        fig.savefig(save_front+save_end, bbox_inches="tight")
+
+def plot_normalized_data_flip(data_all, data_train, title, y_title, save_file='', \
+    file_extension='png', save=True, buffer=0.05, layout=''):
+    scaler = StandardScaler()
+    scaler.fit(data_train[0])
+    scaled_data = scaler.transform(data_all[0])
+    N = data_all[0].shape[1]
+    L = data_all[1].shape[1]
+    
+    # Figure out the dimensions of the plot
+    width = L*6.5
+    height = N*5
+    if len(layout)>0:
+        fig, ax = plt.subplots(N,L,figsize=(width, height), layout=layout)
+    else:
+        fig, ax = plt.subplots(N,L,figsize=(width, height))
+    
+    for i in range(L):
+        for j in range(N):
+            ax[j,i].scatter(data_all[1][:,i], scaled_data[:,j], marker='.', \
+                           color='#56B4E9', alpha=0.5)
+            ax[j,i].set_xlabel(f"$T_{{{i+1}}}$"+ " initial conc. (A.U.)")
+            ax[j,i].set_ylabel(f"Normalized $D_{{{j+1}}}$"+ " meas. conc.")
+#             ax[i,j].set_xlim(left=0,right=xmax)
+            ax[j,i].set_xlim(left=-buffer,right=2+buffer)
+    fig.suptitle(title, y=y_title)
+    if len(save_file)>0:
+        save_front = f"{save_file}_flip"
+    else:
+        save_front = f"{title}_flip"
+    if len(layout)>0:
+        save_end = f"_{layout}.{file_extension}"
+    else :
+        save_end = f".{file_extension}"
+    if save:
+        fig.savefig(save_front+save_end, bbox_inches="tight")
+        
     return (fig, ax)
 
 def save_grid_search_results(results_df, index, grid_search, dataset_size, refit, 
@@ -323,7 +410,8 @@ def compare_alt_model(results_df, alt_model_df):
                 alt_model_df.loc[index,f'better_{set_type}_mean_absolute_error'] = False
 
 def plot_true_vs_pred(T_true, T_pred, Cmin, Cmax, title, save_file='', max_cols=4, \
-    save=True, col_scaler=5, row_scaler=5, color='#0072B2', alpha=0.5):
+    save=True, col_scaler=5, row_scaler=5, color='#0072B2', alpha=0.5, \
+    file_extension='png'):
     L = np.shape(T_true)[1]
     # Figure size of plot
     if L <= max_cols:
@@ -361,15 +449,16 @@ def plot_true_vs_pred(T_true, T_pred, Cmin, Cmax, title, save_file='', max_cols=
             ax[row,col].set_ylim(bottom=min(ylim_array[:,0]),top=max(ylim_array[:,1]))
     fig.suptitle(title)
     if save and len(save_file)>0:
-        fig.savefig(f"{save_file}.png", bbox_inches="tight")
+        fig.savefig(f"{save_file}.{file_extension}", bbox_inches="tight")
     elif save and len(save_file)==0:
-        fig.savefig(f"{title}.png", bbox_inches="tight")
+        fig.savefig(f"{title}.{file_extension}", bbox_inches="tight")
     else:
         pass
     return (fig, ax)
 
 def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
-    max_cols=4, save=True, col_scaler=6.5, row_scaler=5, color='#0072B2'):
+    max_cols=4, save=True, col_scaler=6.5, row_scaler=5, color='#0072B2', \
+    file_extension='png'):
     L = np.shape(T_true)[1]
     # Figure size of plot
     if L <= max_cols:
@@ -408,16 +497,17 @@ def plot_residuals(T_true, T_pred, Cmin, Cmax, title, save_file, \
             ax[row,col].set_ylim(bottom=min(ylim_array[:,0]),top=max(ylim_array[:,1]))
     fig.suptitle(title)
     if save and len(save_file)>0:
-        fig.savefig(f"{save_file}.png", bbox_inches="tight")
+        fig.savefig(f"{save_file}.{file_extension}", bbox_inches="tight")
     elif save and len(save_file)==0:
-        fig.savefig(f"{title}.png", bbox_inches="tight")
+        fig.savefig(f"{title}.{file_extension}", bbox_inches="tight")
     else:
         pass
     return (fig, ax)
 
 def plot_metric_summary(results_df, case, model_type, metric, save_file, width=8, \
     height=6, save=True, xscale='log', train_color='#0072B2', \
-    test_color='orange', cv_color='gray', alpha=1, std_err=True):
+    test_color='orange', cv_color='gray', alpha=1, std_err=True, \
+    file_extension='png'):
     metric = metric.lstrip('neg_')
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE'}
     axis_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE (A.U.)'}
@@ -450,16 +540,16 @@ def plot_metric_summary(results_df, case, model_type, metric, save_file, width=8
     ax.set_xscale(xscale)
     
     if save and len(save_file)>0:
-        fig.savefig(f"{save_file}.png", bbox_inches="tight")
+        fig.savefig(f"{save_file}.{file_extension}", bbox_inches="tight")
     elif save and len(save_file)==0:
-        fig.savefig(f"{title}.png", bbox_inches="tight")
+        fig.savefig(f"{title}.{file_extension}", bbox_inches="tight")
     else:
         pass
     return (fig, ax)
 
 def plot_metric_best_vs_alt(results_df, alt_model_df, case, model_type, metric, \
     save_file, width=8,height=6, save=True, xscale='log', \
-    train_color='#0072B2', test_color='orange', alpha=1):
+    train_color='#0072B2', test_color='orange', alpha=1, file_extension='png'):
     metric = metric.lstrip('neg_')
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE'}
     axis_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE (A.U.)'}
@@ -493,9 +583,9 @@ def plot_metric_best_vs_alt(results_df, alt_model_df, case, model_type, metric, 
     ax.set_xscale(xscale)
     
     if save and len(save_file)>0:
-        fig.savefig(f"{save_file}.png", bbox_inches="tight")
+        fig.savefig(f"{save_file}.{file_extension}", bbox_inches="tight")
     elif save and len(save_file)==0:
-        fig.savefig(f"{title}.png", bbox_inches="tight")
+        fig.savefig(f"{title}.{file_extension}", bbox_inches="tight")
     else:
         pass
     return (fig, ax)
@@ -514,7 +604,8 @@ def get_avg_Ti(Ti_df, D, single, data_type):
 
 def plot_T1_avg_case_2(dataset_size_array, D, Ti_dict_avg, base_case, strengths, \
     metric, colors, linestyles, title, save_file='', save=False, width=15, \
-    height=6, xscale='log', legend_loc=(0.99,1.03), end=0, match_axis=False):
+    height=6, xscale='log', legend_loc=(0.99,1.03), end=0, match_axis=False, \
+    file_extension='png'):
     
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE (A.U.)'}
 
@@ -574,16 +665,17 @@ def plot_T1_avg_case_2(dataset_size_array, D, Ti_dict_avg, base_case, strengths,
     fig.suptitle(title)
     
     if save and len(save_file)>0:
-        fig.savefig(f"{save_file}{matched}.png", bbox_inches="tight")
+        fig.savefig(f"{save_file}{matched}.{file_extension}", bbox_inches="tight")
     elif save and len(save_file)==0:
-        fig.savefig(f"{title}.png", bbox_inches="tight")
+        fig.savefig(f"{title}.{file_extension}", bbox_inches="tight")
     else:
         pass
     return (fig, ax)
 
 def plot_T1_avg_case_3(dataset_size_array, D, Ti_dict_avg, base_case, strengths, \
     metric, colors, linestyles, title, save_file='', save=False, width=15, \
-    height=6, xscale='log', legend_loc=(0.99,1.03), end=0, match_axis=False):
+    height=6, xscale='log', legend_loc=(0.99,1.03), end=0, match_axis=False, \
+    file_extension='png'):
     
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE (A.U.)'}
 
@@ -651,9 +743,9 @@ def plot_T1_avg_case_3(dataset_size_array, D, Ti_dict_avg, base_case, strengths,
     fig.suptitle(title)
     
     if save and len(save_file)>0:
-        fig.savefig(f"{save_file}{matched}.png", bbox_inches="tight")
+        fig.savefig(f"{save_file}{matched}.{file_extension}", bbox_inches="tight")
     elif save and len(save_file)==0:
-        fig.savefig(f"{title}.png", bbox_inches="tight")
+        fig.savefig(f"{title}.{file_extension}", bbox_inches="tight")
     else:
         pass
     return (fig, ax)
@@ -661,7 +753,8 @@ def plot_T1_avg_case_3(dataset_size_array, D, Ti_dict_avg, base_case, strengths,
 
 def plot_TD_avg(dataset_size_array, D, Ti_dict_avg, base_case, names, strengths, \
     metric, colors, linestyles, title, save_file='', save=False, width=15, height=6, \
-    xscale='log', legend_loc=(0.99,1.03), end=0, match_axis=False):
+    xscale='log', legend_loc=(0.99,1.03), end=0, match_axis=False, \
+    file_extension='png'):
 
     metric_dictionary = {'r2': '$R^2$', 'mean_absolute_error': 'MAE (A.U.)'}
     
@@ -716,9 +809,9 @@ def plot_TD_avg(dataset_size_array, D, Ti_dict_avg, base_case, names, strengths,
     fig.suptitle(title)
     
     if save and len(save_file)>0:
-        fig.savefig(f"{save_file}{matched}.png", bbox_inches="tight")
+        fig.savefig(f"{save_file}{matched}.{file_extension}", bbox_inches="tight")
     elif save and len(save_file)==0:
-        fig.savefig(f"{title}.png", bbox_inches="tight")
+        fig.savefig(f"{title}.{file_extension}", bbox_inches="tight")
     else:
         pass
     return (fig, ax)

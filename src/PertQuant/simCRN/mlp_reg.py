@@ -48,6 +48,8 @@ def mlp_reg_main():
     the raw data and exits. Defaults to False.')
     parser.add_argument('--time_file', type=str, help='File to append run time \
         data to.')
+    parser.add_argument('--overwrite', type=bool, help='Whether to overwrite \
+        existing results')
     # parser.add_argument('--quiet', type=int, help='Verbosity level. 0 for settings \
         # and timing. 1 for no commandline output. Defaults to 0.')
     args = parser.parse_args()
@@ -73,6 +75,11 @@ def mlp_reg_main():
     else:
         parent_folder = os.getcwd()
 
+    if args.overwrite:
+        overwrite = args.overwrite
+    else:
+        overwrite = False
+
     # Read in the settings and data
     print(f'max_iter = {max_iter}')
     print('Reading in data')
@@ -90,8 +97,12 @@ def mlp_reg_main():
     folder = f'{case}_{model_type}{suffix}'
     
     save_folder = f'{parent_folder}{sep}{folder}'
-    if folder not in os.listdir(parent_folder):
+    existing_folder = folder in os.listdir(parent_folder)
+    if not existing_folder:
         os.mkdir(save_folder)
+    else:
+        pass
+        
 
     # # # Data preparation
     # Take a look at the raw data
@@ -109,35 +120,56 @@ def mlp_reg_main():
     else:
         pass
 
-    print('Partitioning data')
-    # # Partition the data into subsets
-    # Save the dataset indices
-    full_set_size = np.shape(A_out_array)[0]
-    train_set_size = int(0.8*full_set_size)
+    
     if N==2:
-        dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50, 25, 10]
+        full_dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50, 25, 10]
     elif N==20:
-        dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50]
+        full_dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50]
     else:
-        dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50, 25]
-    data_set_df = pd.DataFrame(data=np.zeros((np.shape(A_out_array)[0], \
-        len(dataset_size_list)+1), dtype='int'), \
-    columns=["test_set"]+dataset_size_list)
-    # Split data into 80/20 train/test
-    D_train, T_train, D_final_test, T_final_test, train_array, test_list = \
-    partition_data(A_out_array, Ci_array, train_set_size, data_set_df, \
-        np.arange(full_set_size), test=True)
-    D_train_list = [D_train]
-    T_train_list = [T_train]
-    # Sequentially partition the data sets so the smaller subsets don't have 
-    # access to data larger don't have access to
-    for i in range(len(dataset_size_list)-1):
-        D_train, T_train, D_test, T_test, train_array, out_list = \
-        partition_data(A_out_array, Ci_array, dataset_size_list[i+1], data_set_df, \
-            train_array, test=False)
-        D_train_list.append(D_train)
-        T_train_list.append(T_train)
-    data_set_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_dataset_partitions{suffix}.csv')
+        full_dataset_size_list = [train_set_size, 3000, 2000, 1000, 500, 250, 100, 50, 25]
+
+    try: 
+        print('Found partitioned data')
+        data_dict = get_partitioned_data(A_out_array, Ci_array, dataset_partition_file)
+        write=False
+    except:
+        write=True
+
+    if overwrite or write:
+        print('Partitioning data')
+        # # Partition the data into subsets
+        # Save the dataset indices
+        full_set_size = np.shape(A_out_array)[0]
+        train_set_size = int(0.8*full_set_size)
+        
+        data_set_df = pd.DataFrame(data=np.zeros((np.shape(A_out_array)[0], \
+            len(full_dataset_size_list)+1), dtype='int'), \
+        columns=["test_set"]+full_dataset_size_list)
+        # Split data into 80/20 train/test
+        D_train, T_train, D_final_test, T_final_test, train_array, test_list = \
+        partition_data(A_out_array, Ci_array, train_set_size, data_set_df, \
+            np.arange(full_set_size), test=True)
+        data_dict[dataset_size] = (D_train, T_train)
+        # Sequentially partition the data sets so the smaller subsets don't have 
+        # access to data larger don't have access to
+        for i, dataset_size in enumerate(full_dataset_size_list[1:]):
+            D_train, T_train, D_test, T_test, train_array, out_list = \
+            partition_data(A_out_array, Ci_array, dataset_size, data_set_df, \
+                train_array, test=False)
+            data_dict[dataset_size] = (D_train, T_train)
+
+        data_set_df.to_csv(dataset_partition_file)
+
+    # Check if there are existing trained models
+    if not overwrite and existing_folder:
+        folder_files = os.listdir(save_folder)
+        model_list = [file for file in files if '.pkl' in file]
+        fitted_dataset_sizes = []
+        for model in model_list:
+            fitted_dataset_sizes.append(int(model.removesuffix(f'{suffix}.pkl').split('_')[-1]))
+        dataset_size_list = [size for size in full_dataset_size_list if size not in fitted_dataset_sizes]
+    else:
+        dataset_size_list = full_dataset_size_list
 
     # # # MLP regression
     # # Hyperparameter optimization
@@ -164,6 +196,7 @@ def mlp_reg_main():
     print(f'Number of hyperparameter combinations: {combo_number_MLP}')
 
     # Create dataframe to store results
+    # OPEN DATAFRAME IF IT EXISTS
     grid_search_list = []
     pred_train_list = []
     pred_test_list = []
@@ -174,15 +207,16 @@ def mlp_reg_main():
     ['train_'+ score.lstrip("neg_") for score in scoring_MLP] + ['train_pred_time'] + \
     ['test_'+ score.lstrip("neg_") for score in scoring_MLP] + ['test_pred_time']
     results_df = pd.DataFrame(columns=results_columns)
-    results_df['dataset_size'] = dataset_size_list
+    results_df['dataset_size'] = full_dataset_size_list
     # alt_model_df = pd.DataFrame(columns=results_columns)
 
+    # OPEN TI_DF IF IT EXISTS
     # Create dataframe to store Ti-specific metrics
     Ti_columns = ['dataset_size'] + [f'Train T{i+1}' for i in range(L)] + [f'Test T{i+1}' for i in range(L)]
     MAE_df = pd.DataFrame(columns=Ti_columns)
-    MAE_df['dataset_size'] = dataset_size_list
+    MAE_df['dataset_size'] = full_dataset_size_list
     r2_df = pd.DataFrame(columns=Ti_columns)
-    r2_df['dataset_size'] = dataset_size_list
+    r2_df['dataset_size'] = full_dataset_size_list
 
     # Grid search 5 fold cross validation
     start = time.perf_counter()
@@ -196,7 +230,7 @@ def mlp_reg_main():
 
         print('Saving grid search results')
         save_grid_search_results(results_df, i, grid_search_list[i], \
-            dataset_size_list[i], refit_MLP, N, M, L, case, model_type, \
+            dataset_size, refit_MLP, N, M, L, case, model_type, \
             scoring_MLP, sep, save_folder=save_folder, suffix=suffix)
 
         # Predict with the best model
@@ -225,13 +259,13 @@ def mlp_reg_main():
             pred_train, multioutput='raw_values')
         r2_df.loc[i,'Test T1':f'Test T{L}'] = r2_score(T_final_test, \
             pred_test, multioutput='raw_values')
-    end = time.perf_counter()
 
-    # Save the results dataframe
-    print('Saving results to csv')
-    results_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_results_summary_{model_type}{suffix}.csv')
-    MAE_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_MAE_Ti_{model_type}{suffix}.csv')
-    r2_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_r2_Ti_{model_type}{suffix}.csv')
+        # Save results
+        print('Saving results')
+        results_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_results_summary_{model_type}{suffix}.csv')
+        MAE_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_MAE_Ti_{model_type}{suffix}.csv')
+        r2_df.to_csv(f'{parent_folder}{sep}{N}-{M}-{L}_{case}_r2_Ti_{model_type}{suffix}.csv')
+    end = time.perf_counter()    
 
     if args.time_file: 
         time_file = args.time_file.strip('"')

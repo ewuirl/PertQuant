@@ -278,6 +278,7 @@ def gen_eq_data_parallel_main():
     # Compute Am
     if quiet==0:
         print('Computing Am.')
+    N_runs = max(N_runs, 0)
     laps = [lap]*int(np.floor(N_runs/lap)) + [N_runs % lap]
     simulation_start = time.perf_counter()
     lap_time = simulation_start
@@ -301,7 +302,7 @@ def gen_eq_data_parallel_main():
         append_data(data_file_name, Ci_all_array, Am_array)
         if quiet == 0:
             lap_time = time.perf_counter() 
-            print(f'Finished with {dataset_size}/{N_runs}\tTime elapsed: \
+            print(f'Finished with {dataset_size}/{N_runs} samples\tTime elapsed: \
                 {str(datetime.timedelta(seconds=lap_time-simulation_start))}')
     
     time_file_name = f'{save_file_name}_data{guess_name}{constraints_name}.txt'
